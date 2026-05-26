@@ -41,9 +41,9 @@ variables:
 - name: serviceConnection
   value: 'Azure-to-ADO-svc-coonection'
 - name: backendResourceGroup
-  value: 'terrastatesa'
+  value: 'rgeus-tftest-01'
 - name: backendStorageAccount
-  value: 'saeushrdev01'
+  value: 'terrastatesa'
 - name: backendContainer
   value: 'tfstate'
 - name: stateKey

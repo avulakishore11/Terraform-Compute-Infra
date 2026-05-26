@@ -200,7 +200,7 @@ variable "storage_account_replication_type" {
 variable "storage_access_tier" {
   description = "Default blob access tier (Hot | Cool)"
   type        = string
-  default     = "Hot"
+  default     = "cool"
 }
 
 variable "storage_public_network_access_enabled" {
