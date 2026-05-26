@@ -82,8 +82,10 @@ stages:
       inputs:
         provider: 'azurerm'
         command: 'plan'
-        commandOptions: '-var-file=$(varFile) -var="admin_password=$(admin_password)" -out=tfplan-dev'
+        commandOptions: '-var-file=$(varFile) -out=tfplan-dev'
         environmentServiceNameAzureRM: $(serviceConnection)
+      env:
+        TF_VAR_admin_password: $(admin_password)
 
     - task: TerraformTaskV4@4
       displayName: 'Apply (Dev)'
@@ -133,8 +135,10 @@ stages:
             inputs:
               provider: 'azurerm'
               command: 'plan'
-              commandOptions: '-var-file=$(varFile) -var="admin_password=$(admin_password)" -out=tfplan-uat'
+              commandOptions: '-var-file=$(varFile) -out=tfplan-uat'
               environmentServiceNameAzureRM: $(serviceConnection)
+            env:
+              TF_VAR_admin_password: $(admin_password)
 
           - task: TerraformTaskV4@4
             displayName: 'Apply (UAT)'
@@ -184,8 +188,10 @@ stages:
             inputs:
               provider: 'azurerm'
               command: 'plan'
-              commandOptions: '-var-file=$(varFile) -var="admin_password=$(admin_password)" -out=tfplan-prod'
+              commandOptions: '-var-file=$(varFile) -out=tfplan-prod'
               environmentServiceNameAzureRM: $(serviceConnection)
+            env:
+              TF_VAR_admin_password: $(admin_password)
 
           - task: TerraformTaskV4@4
             displayName: 'Apply (Prod)'
@@ -249,5 +255,7 @@ stages:
       inputs:
         provider: 'azurerm'
         command: 'destroy'
-        commandOptions: '-auto-approve -var-file=$(varFile) -var="admin_password=$(admin_password)"'
+        commandOptions: '-auto-approve -var-file=$(varFile)'
+      env:
+        TF_VAR_admin_password: $(admin_password)
         environmentServiceNameAzureRM: $(serviceConnection)
