@@ -50,6 +50,8 @@ variables:
   value: 'dev/terraform.tfstate'
 - name: varFile
   value: 'environments/dev.tfvars'
+- name: serviceConnection
+  value: Azure-to-ADO-svc-connection
 # Resolved at compile time from the parameter above.
 # Empty string = no -target flag = full deploy.
 # Both targets are listed explicitly — do not rely on Terraform's implicit
@@ -148,13 +150,15 @@ stages:
         backendAzureRmStorageAccountName: $(backendStorageAccount)
         backendAzureRmContainerName: $(backendContainer)
         backendAzureRmKey: $(stateKey)
-        commandOptions: ''
+        environmentServiceNameAzureRM: $(serviceConnection)
+
 
     - task: TerraformTaskV4@4
       displayName: 'Validate (Dev)'
       inputs:
         provider: 'azurerm'
         command: 'validate'
+
 
     - task: TerraformTaskV4@4
       displayName: 'Plan (Dev)'
