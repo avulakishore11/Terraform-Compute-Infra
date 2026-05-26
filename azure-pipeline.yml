@@ -1,6 +1,8 @@
 trigger:
   branches:
     include:
+     - test/feature-branch
+    exclude:
       - feature/updated-with-all-code
 
 pool:
