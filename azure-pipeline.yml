@@ -1,47 +1,20 @@
 trigger:
   branches:
     include:
-     - test/feature-branch
+      - test/feature-branch
     exclude:
       - feature/updated-with-all-code
 
 pool:
   vmImage: ubuntu-latest
 
-# ── Deploy target ─────────────────────────────────────────────────────────────
-# When manually queuing the pipeline, choose which module to deploy.
-# Auto-triggered runs (push) always use the default "all".
-#
-#   all              → full terraform plan/apply (no -target flag)
-#   storage_account  → ONLY the two modules below, nothing else:
-#                        module.resource_group   ← storage account cannot exist without an RG
-#                        module.storage_account  ← the actual target
-#
-#                      VM, NIC, NSG, Route Table, Managed Disk, Managed Identity
-#                      are NOT touched — they have zero dependency on storage account.
-#
-#                      NOTE: admin_username / admin_password are still passed because
-#                      Terraform requires all declared root variables to have values
-#                      even when -target limits what gets applied.
-#
-# To add another targeted module in the future:
-#   1. Add a new value to the list below (e.g. "virtual_machine")
-#   2. Add a matching condition to the targetFlag variable beneath,
-#      listing the module AND all its dependencies explicitly.
+# ── Pipeline variables ────────────────────────────────────────────────────────
+# admin_password: Add this as a SECRET variable in Azure DevOps UI
+#   Pipeline → Edit → Variables → add "admin_password" and lock it.
 # ─────────────────────────────────────────────────────────────────────────────
-parameters:
-- name: deployTarget
-  displayName: 'Deploy Target'
-  type: string
-  default: 'all'
-  values:
-  - all
-  - storage_account
-
 variables:
-- group: Windows_VM_Credentials   # contains: admin_username (plain) and admin_password (secret)
 - name: serviceConnection
-  value: 'Azure-to-ADO-svc-coonection'
+  value: 'Azure-to-ADO-svc-connection'
 - name: backendResourceGroup
   value: 'rgeus-tftest-01'
 - name: backendStorageAccount
@@ -52,35 +25,15 @@ variables:
   value: 'dev/terraform.tfstate'
 - name: varFile
   value: 'environments/dev.tfvars'
-- name: serviceConnection
-  value: Azure-to-ADO-svc-connection
-# Resolved at compile time from the parameter above.
-# Empty string = no -target flag = full deploy.
-# Both targets are listed explicitly — do not rely on Terraform's implicit
-# dependency resolution so it is always obvious exactly what will be deployed.
-#- ${{ if eq(parameters.deployTarget, 'storage_account') }}:
- # - name: targetFlag
-  #  value: '-target=module.resource_group -target=module.storage_account'
-#- ${{ if ne(parameters.deployTarget, 'storage_account') }}:
- # - name: targetFlag
-  #  value: ''
 
-
-# ══════════════════════════════════════════════════════════════════════════════
-# STAGE 1: VALIDATE — runs FIRST on every push. Cheap, fast checks that catch
-# ~60% of bugs before we ever talk to Azure. Fails fast = saves money + time.
-#   - terraform fmt    → code formatting consistency
-#   - tflint           → deprecated syntax, naming rules, Azure best practices
-#   - tfsec            → security misconfigurations (public storage, open NSGs)
-#   - terraform validate → syntax + variable references
-# ══════════════════════════════════════════════════════════════════════════════
 stages:
 
+# ── STAGE 1: VALIDATE ────────────────────────────────────────────────────────
 - stage: Validate
-  displayName: 'Static Validation & Security Scan'
+  displayName: 'Validate'
   jobs:
   - job: StaticChecks
-    displayName: 'Lint, Format, Security Scan'
+    displayName: 'Lint and Security Scan'
     steps:
 
     - task: TerraformInstaller@1
@@ -88,50 +41,21 @@ stages:
       inputs:
         terraformVersion: 'latest'
 
-    # ─── Format check ─────────────────────────────────────────────────────
-    # -check : report unformatted files without modifying them
-    # -recursive : check all subdirectories
-    # Fails the pipeline if anyone commits unformatted code (e.g. wrong indentation, misaligned blocks, etc.). before proceeding to further 
-    #- script: terraform fmt -check -recursive
-     # displayName: 'Terraform Format Check'
-
-    # ─── Syntax + reference validation ────────────────────────────────────
-    # -backend=false skips talking to Azure backend storage account just for syntax check.
-    # Makes this step ~10x faster than a full init.
     - script: |
         terraform init -backend=false
         terraform validate
-      displayName: 'Terraform Validate (syntax)'
+      displayName: 'Terraform Validate'
 
-    # ─── TFLint ───────────────────────────────────────────────────────────
-    # Catches: deprecated syntax, unused vars, naming convention violations,
-    # Azure-specific anti-patterns (e.g. unsupported VM SKUs in a region).
-    #- script: |
-     ### tflint --recursive
-      #displayName: 'TFLint'
-
-    # ─── tfsec ────────────────────────────────────────────────────────────
-    # Static security scan. Catches things like:
-    #   - Storage accounts allowing public blob access
-    #   - NSG rules with source = *
-    #   - VMs without disk encryption
-    #   - Key Vaults without soft-delete
-    # --soft-fail : report findings but don't fail the build (yet).
-    # Once your codebase is clean, REMOVE --soft-fail to make it a hard gate.
     - script: |
         curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
         tfsec . --soft-fail
       displayName: 'tfsec Security Scan'
 
-# ══════════════════════════════════════════════════════════════════════════════
-# DEV — runs only if Validate passes. Auto-deploys on every push.
-# ══════════════════════════════════════════════════════════════════════════════
-# Deploy stages are skipped when ENABLE_DESTROY=true so only the Destroy stage runs.
+# ── STAGE 2: DEV ─────────────────────────────────────────────────────────────
 - stage: Dev
   displayName: 'Deploy to Dev'
   dependsOn: Validate
   condition: and(succeeded('Validate'), ne(variables['ENABLE_DESTROY'], 'true'))
-
   jobs:
   - job: TerraformDev
     displayName: 'Terraform Dev'
@@ -152,26 +76,13 @@ stages:
         backendAzureRmStorageAccountName: $(backendStorageAccount)
         backendAzureRmContainerName: $(backendContainer)
         backendAzureRmKey: $(stateKey)
-        environmentServiceNameAzureRM: $(serviceConnection)
-
-
-    - task: TerraformTaskV4@4
-      displayName: 'Validate (Dev)'
-      inputs:
-        provider: 'azurerm'
-        command: 'validate'
-
 
     - task: TerraformTaskV4@4
       displayName: 'Plan (Dev)'
       inputs:
         provider: 'azurerm'
         command: 'plan'
-        # $(targetFlag) is empty for a full deploy.
-        # For storage_account target it expands to:
-        #   -target=module.resource_group -target=module.storage_account
-        # -target is only set in plan; apply receives the plan file which already encodes the scope.
-        commandOptions: '$(targetFlag) -var-file=$(varFile) -var="admin_username=$(admin_username)" -var="admin_password=$(admin_password)" -out=tfplan-dev'
+        commandOptions: '-var-file=$(varFile) -var="admin_password=$(admin_password)" -out=tfplan-dev'
         environmentServiceNameAzureRM: $(serviceConnection)
 
     - task: TerraformTaskV4@4
@@ -181,21 +92,8 @@ stages:
         command: 'apply'
         commandOptions: '-auto-approve tfplan-dev'
         environmentServiceNameAzureRM: $(serviceConnection)
-    
 
-    - task: TerraformTaskV4@4
-      displayName: 'Output (Dev)'
-      inputs:
-        provider: 'azurerm'
-        command: 'output'
-        commandOptions: '-json'
-        environmentServiceNameAzureRM: $(serviceConnection)
-    # Destroy is intentionally removed from this job.
-    # Use the dedicated Destroy stage by queuing the pipeline with ENABLE_DESTROY=true.
-
-# ══════════════════════════════════════════════════════════════════════════════
-# UAT — runs after Dev succeeds; requires manual approval via Environment
-# ══════════════════════════════════════════════════════════════════════════════
+# ── STAGE 3: UAT ─────────────────────────────────────────────────────────────
 - stage: UAT
   displayName: 'Deploy to UAT'
   dependsOn: Dev
@@ -203,7 +101,6 @@ stages:
   variables:
     varFile: 'environments/uat.tfvars'
     stateKey: 'uat/terraform.tfstate'
-
   jobs:
   - deployment: TerraformUAT
     displayName: 'Terraform UAT'
@@ -221,7 +118,7 @@ stages:
               terraformVersion: 'latest'
 
           - task: TerraformTaskV4@4
-            displayName: 'Init (Test)'
+            displayName: 'Init (UAT)'
             inputs:
               provider: 'azurerm'
               command: 'init'
@@ -230,33 +127,24 @@ stages:
               backendAzureRmStorageAccountName: $(backendStorageAccount)
               backendAzureRmContainerName: $(backendContainer)
               backendAzureRmKey: $(stateKey)
-              commandOptions: ''
 
           - task: TerraformTaskV4@4
-            displayName: 'Validate (Test)'
-            inputs:
-              provider: 'azurerm'
-              command: 'validate'
-
-          - task: TerraformTaskV4@4
-            displayName: 'Plan (Test)'
+            displayName: 'Plan (UAT)'
             inputs:
               provider: 'azurerm'
               command: 'plan'
-              commandOptions: '$(targetFlag) -var-file=$(varFile) -var="admin_username=$(admin_username)" -var="admin_password=$(admin_password)" -out=tfplan-test'
+              commandOptions: '-var-file=$(varFile) -var="admin_password=$(admin_password)" -out=tfplan-uat'
               environmentServiceNameAzureRM: $(serviceConnection)
 
           - task: TerraformTaskV4@4
-            displayName: 'Apply (Test)'
+            displayName: 'Apply (UAT)'
             inputs:
               provider: 'azurerm'
               command: 'apply'
-              commandOptions: '-auto-approve tfplan-test'
+              commandOptions: '-auto-approve tfplan-uat'
               environmentServiceNameAzureRM: $(serviceConnection)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PROD — runs after Test succeeds; requires manual approval via Environment
-# ══════════════════════════════════════════════════════════════════════════════
+# ── STAGE 4: PROD ────────────────────────────────────────────────────────────
 - stage: Prod
   displayName: 'Deploy to Prod'
   dependsOn: UAT
@@ -264,7 +152,6 @@ stages:
   variables:
     varFile: 'environments/prod.tfvars'
     stateKey: 'prod/terraform.tfstate'
-
   jobs:
   - deployment: TerraformProd
     displayName: 'Terraform Prod'
@@ -291,20 +178,13 @@ stages:
               backendAzureRmStorageAccountName: $(backendStorageAccount)
               backendAzureRmContainerName: $(backendContainer)
               backendAzureRmKey: $(stateKey)
-              commandOptions: ''
-
-          - task: TerraformTaskV4@4
-            displayName: 'Validate (Prod)'
-            inputs:
-              provider: 'azurerm'
-              command: 'validate'
 
           - task: TerraformTaskV4@4
             displayName: 'Plan (Prod)'
             inputs:
               provider: 'azurerm'
               command: 'plan'
-              commandOptions: '$(targetFlag) -var-file=$(varFile) -var="admin_username=$(admin_username)" -var="admin_password=$(admin_password)" -out=tfplan-prod'
+              commandOptions: '-var-file=$(varFile) -var="admin_password=$(admin_password)" -out=tfplan-prod'
               environmentServiceNameAzureRM: $(serviceConnection)
 
           - task: TerraformTaskV4@4
@@ -315,55 +195,33 @@ stages:
               commandOptions: '-auto-approve tfplan-prod'
               environmentServiceNameAzureRM: $(serviceConnection)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# DESTROY — never runs on a normal push (ENABLE_DESTROY defaults to false).
-#
-# HOW TO TRIGGER:
-#   1. Queue this pipeline manually in Azure DevOps.
-#   2. Override variable: ENABLE_DESTROY = true
-#   3. Approve the ManualValidation prompt in the pipeline UI (60 min timeout,
-#      auto-rejects on timeout — inaction is always safe).
-#
-# No pre-created environment needed. Two human gates protect every destroy:
-#   Gate 1 — ENABLE_DESTROY variable must be explicitly set to 'true'
-#   Gate 2 — ManualValidation task (agentless job, pauses until approved)
-# ══════════════════════════════════════════════════════════════════════════════
+# ── STAGE 5: DESTROY ─────────────────────────────────────────────────────────
+# Trigger: queue pipeline manually with variable ENABLE_DESTROY=true
+# Two gates: the variable flag + ManualValidation approval
+# ─────────────────────────────────────────────────────────────────────────────
 - stage: Destroy
   displayName: 'Destroy Infrastructure'
   dependsOn: Validate
   condition: and(succeeded('Validate'), eq(variables['ENABLE_DESTROY'], 'true'))
-
   jobs:
 
-  # ── Gate 2: human must read the warning and click Resume ──────────────────
-  # ManualValidation MUST run in pool: server (agentless).
-  # It cannot run inside a deployment job or a regular agent job.
   - job: ApproveDestroy
     displayName: 'Manual Approval Gate'
     pool: server
     timeoutInMinutes: 60
     steps:
     - task: ManualValidation@0
-      displayName: 'Confirm destroy — click Resume to proceed, Reject to abort'
+      displayName: 'Confirm Destroy'
       inputs:
         instructions: |
-          ⚠️  DESTRUCTIVE OPERATION — READ BEFORE APPROVING  ⚠️
-
-          ENABLE_DESTROY=true was set when this pipeline was queued.
-          Proceeding will permanently delete infrastructure resources.
-
-          Environment : $(varFile)
-          State key   : $(stateKey)
-
-          Click Resume only if you are certain this destroy is intentional.
-          Click Reject to abort — no resources will be touched.
+          WARNING: This will permanently delete all infrastructure in $(varFile).
+          Click Resume to proceed, or Reject to abort.
         onTimeout: 'reject'
         timeoutInMinutes: 60
 
-  # ── Terraform destroy: runs only after human approval above ───────────────
   - job: TerraformDestroy
     displayName: 'Terraform Destroy'
-    dependsOn: ApproveDestroy  # blocked until ApproveDestroy job succeeds
+    dependsOn: ApproveDestroy
     pool:
       vmImage: ubuntu-latest
     steps:
@@ -385,24 +243,11 @@ stages:
         backendAzureRmStorageAccountName: $(backendStorageAccount)
         backendAzureRmContainerName: $(backendContainer)
         backendAzureRmKey: $(stateKey)
-        commandOptions: ''
 
-    # Plan -destroy so the pipeline logs show exactly what will be deleted.
-    # The human already approved above; this is an audit record, not another gate.
-    - task: TerraformTaskV4@4
-      displayName: 'Plan Destroy (audit log)'
-      inputs:
-        provider: 'azurerm'
-        command: 'plan'
-        commandOptions: '-destroy -var-file=$(varFile) -var="admin_username=$(admin_username)" -var="admin_password=$(admin_password)" -out=tfplan-destroy'
-        environmentServiceNameAzureRM: $(serviceConnection)
-
-    # -auto-approve is intentional: the two pipeline gates above (variable +
-    # ManualValidation) are the human checkpoints, not the CLI flag.
     - task: TerraformTaskV4@4
       displayName: 'Destroy'
       inputs:
         provider: 'azurerm'
         command: 'destroy'
-        commandOptions: '-auto-approve -var-file=$(varFile) -var="admin_username=$(admin_username)" -var="admin_password=$(admin_password)"'
+        commandOptions: '-auto-approve -var-file=$(varFile) -var="admin_password=$(admin_password)"'
         environmentServiceNameAzureRM: $(serviceConnection)

@@ -25,6 +25,8 @@ variable "disk_size_gb" {
   default     = 128
 }
 
+
+# attaching the this disk to VM requires the VM's resource ID and a LUN (Logical Unit Number) for the attachment. 
 variable "vm_id" {
   description = "Resource ID of the VM to attach the disk to"
   type        = string
