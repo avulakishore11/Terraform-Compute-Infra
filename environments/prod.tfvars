@@ -1,13 +1,13 @@
-resource_group_name = "rg-winvm-prod"
-location            = "eastus"
-environment         = "prod"
-project             = "winvm"
+location    = "eastus"
+environment = "prod"
+project     = "winvm"
+instance    = "01"
 
 tags = {
+  Department  = "CorpIT"
+  CreatedBy   = "Kishore Avula"
+  Project     = "Infra-automation"
   Environment = "prod"
-  Project     = "winvm"
-  Owner       = "Infra-team/Kishore"
-  ManagedBy   = "terraform"
 }
 
 vnet_address_space      = ["10.3.0.0/16"]
@@ -36,13 +36,31 @@ routes = [
   }
 ]
 
-# Larger SKUs for prod
 vm_size        = "Standard_D4s_v3"
 admin_username = "azureadmin"
 
-os_disk_size_gb              = 256
+os_disk_size_gb              = 350
 os_disk_storage_account_type = "Premium_LRS"
 
 data_disk_size_gb              = 256
 data_disk_storage_account_type = "Premium_LRS"
 data_disk_lun                  = 0
+
+deploy_storage_account           = false
+storage_workload                 = "hr"
+storage_account_kind             = "StorageV2"
+storage_account_tier             = "Standard"
+storage_account_replication_type = "GZRS"
+storage_access_tier              = "Hot"
+
+storage_public_network_access_enabled = false
+storage_shared_access_key_enabled     = false
+
+blob_soft_delete_retention_days      = 30
+container_soft_delete_retention_days = 30
+storage_versioning_enabled           = true
+
+storage_ip_rules       = []
+storage_network_bypass = ["AzureServices"]
+
+maintenance_configuration_resource_id = "/subscriptions/7a6d2623-b7d9-467b-ab2f-d71d7bf6d45d.../resourceGroups/.../providers/Microsoft.Maintenance/maintenanceConfigurations/..."

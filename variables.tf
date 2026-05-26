@@ -15,13 +15,13 @@ variable "location" {
 # it refers to the variable alreadydefined in the dev.tfvars file, which will be passed in when you run terraform plan/apply with the -var-file option. This allows you to have different values for environment (dev, test, prod) without changing the code, and it will be used in the naming convention for resources and in tags.
 
 variable "environment" {
-  description = "Deployment environment (dev | test | prod)"
+  description = "Deployment environment (dev | uat | prod)"
   type        = string
   validation {
-    condition     = contains(["dev", "test", "prod"], var.environment) # var.environment  = a runtime input variable, not a compile-time variable definition
-    error_message = "environment must be one of: dev, test, prod."
+    condition     = contains(["dev", "uat", "prod"], var.environment)
+    error_message = "environment must be one of: dev, uat, prod."
   }
-} # fmt fix: closing brace had a trailing space; terraform fmt -check treats trailing whitespace as a formatting error.
+}
 
 # So inside validation:
 
@@ -37,17 +37,15 @@ variable "project" {
 # Tags are a map(string) — key-value pairs applied to the VM resource.
 # Passed in from the root module so all resources share the same tags.
 variable "tags" {
-  description = "Tags applied to every resource. Must include: CreatedBy, Owner, Department, Environment."
+  description = "Tags applied to every resource. Must include: Department, CreatedBy, Project, Environment."
   type        = map(string)
   default     = {}
   validation {
-    # fmt fix: condition (9 chars) must align its = with error_message (13 chars) — needs 4 padding spaces.
-    # fmt fix: HCL for-expression requires a space after the colon — ": value" not ":value".
     condition = alltrue([
-      for key in ["Name", "Description", "Location", "Environment", "Project"]
+      for key in ["Department", "CreatedBy", "Project", "Environment"]
       : contains(keys(var.tags), key)
     ])
-    error_message = "tags map must contain all required keys: Name, Description, Location, Environment, Project."
+    error_message = "tags map must contain all required keys: Department, CreatedBy, Project, Environment."
   }
 }
 
@@ -251,4 +249,10 @@ variable "storage_network_bypass" {
   description = "Azure services that bypass the storage firewall (AzureServices | Logging | Metrics | None)"
   type        = list(string)
   default     = ["AzureServices"]
+}
+
+variable "deploy_storage_account" {
+  description = "Whether to deploy the storage account"
+  type        = bool
+  default     = false
 }

@@ -1,13 +1,13 @@
-resource_group_name = "rg-winvm-test"
-location            = "eastus"
-environment         = "test"
-project             = "winvm"
+location    = "eastus"
+environment = "uat"
+project     = "winvm"
+instance    = "01"
 
 tags = {
-  Environment = "test"
-  Project     = "winvm"
-  Owner       = "Infra-team/Kishore"
-  ManagedBy   = "terraform"
+  Department  = "CorpIT"
+  CreatedBy   = "Kishore Avula"
+  Project     = "Infra-automation"
+  Environment = "uat"
 }
 
 vnet_address_space      = ["10.2.0.0/16"]
@@ -36,7 +36,6 @@ routes = [
   }
 ]
 
-# Mid-tier SKUs for test — mirrors prod sizing for accurate testing
 vm_size        = "Standard_D2s_v3"
 admin_username = "azureadmin"
 
@@ -46,3 +45,22 @@ os_disk_storage_account_type = "Premium_LRS"
 data_disk_size_gb              = 128
 data_disk_storage_account_type = "Premium_LRS"
 data_disk_lun                  = 0
+
+deploy_storage_account           = false
+storage_workload                 = "hr"
+storage_account_kind             = "StorageV2"
+storage_account_tier             = "Standard"
+storage_account_replication_type = "ZRS"
+storage_access_tier              = "Hot"
+
+storage_public_network_access_enabled = false
+storage_shared_access_key_enabled     = true
+
+blob_soft_delete_retention_days      = 7
+container_soft_delete_retention_days = 7
+storage_versioning_enabled           = false
+
+storage_ip_rules       = []
+storage_network_bypass = ["AzureServices"]
+
+maintenance_configuration_resource_id = "/subscriptions/7a6d2623-b7d9-467b-ab2f-d71d7bf6d45d.../resourceGroups/.../providers/Microsoft.Maintenance/maintenanceConfigurations/..."

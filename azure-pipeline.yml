@@ -188,20 +188,20 @@ stages:
     # Use the dedicated Destroy stage by queuing the pipeline with ENABLE_DESTROY=true.
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TEST — runs after Dev succeeds; requires manual approval via Environment
+# UAT — runs after Dev succeeds; requires manual approval via Environment
 # ══════════════════════════════════════════════════════════════════════════════
-- stage: Test
-  displayName: 'Deploy to Test'
+- stage: UAT
+  displayName: 'Deploy to UAT'
   dependsOn: Dev
   condition: and(succeeded('Dev'), ne(variables['ENABLE_DESTROY'], 'true'))
   variables:
-    varFile: 'environments/test.tfvars'
-    stateKey: 'test/terraform.tfstate'
+    varFile: 'environments/uat.tfvars'
+    stateKey: 'uat/terraform.tfstate'
 
   jobs:
-  - deployment: TerraformTest
-    displayName: 'Terraform Test'
-    environment: 'test'
+  - deployment: TerraformUAT
+    displayName: 'Terraform UAT'
+    environment: 'uat'
     strategy:
       runOnce:
         deploy:
@@ -253,8 +253,8 @@ stages:
 # ══════════════════════════════════════════════════════════════════════════════
 - stage: Prod
   displayName: 'Deploy to Prod'
-  dependsOn: Test
-  condition: and(succeeded('Test'), ne(variables['ENABLE_DESTROY'], 'true'))
+  dependsOn: UAT
+  condition: and(succeeded('UAT'), ne(variables['ENABLE_DESTROY'], 'true'))
   variables:
     varFile: 'environments/prod.tfvars'
     stateKey: 'prod/terraform.tfstate'

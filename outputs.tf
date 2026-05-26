@@ -52,3 +52,13 @@ output "data_disk_id" {
   description = "Resource ID of the Managed Data Disk"
   value       = module.managed_disk.id
 }
+
+# Wrong — will error
+# output "storage_id" {
+ # value = module.storage_account.id
+# }
+
+# Correct
+output "storage_id" {
+  value = module.storage_account[0].id
+}

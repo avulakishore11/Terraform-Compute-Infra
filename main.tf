@@ -107,6 +107,7 @@ module "policy_remediation_identity" {
 }
 
 module "storage_account" {
+  count               = var.deploy_storage_account ? 1 : 0   # conditional deployment based on variable
   source              = "./modules/storage_account"
   storage_account_name = lower(replace("st${local.location_abbr[var.location]}-${var.storage_workload}${var.environment}-${var.instance}", "-", ""))
   location            = var.location

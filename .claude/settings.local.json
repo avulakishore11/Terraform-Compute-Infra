@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(mkdir -p modules/networking modules/compute)",
-      "Bash(rm -f modules/nsg.tf modules/rt.tf modules/subnet.tf modules/vm.tf modules/vnet.tf)"
-    ]
-  }
-}

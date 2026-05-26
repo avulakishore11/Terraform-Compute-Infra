@@ -1,7 +1,7 @@
 terraform {
   backend "azurerm" {
-    resource_group_name  = "kaseya-orgchat"
-    storage_account_name = "saeushrdev01"
+    resource_group_name  = "rgeus-tftest-01"
+    storage_account_name = "terrastatesa"
     container_name       = "tfstate"
     key                  = "dev/terraform.tfstate"
     # use_azuread_auth removed — TerraformTaskV4 retrieves the storage account

@@ -4,11 +4,10 @@ project     = "winvm" # ***this IMP, so confirm with lead before changing, as it
 instance    = "01"
 
 tags = {
-  Name        = "winvm-dev-01"
-  Description = "Windows VM for winvm project in dev environment"
-  Location    = "eastus"
+  Department  = "CorpIT"
+  CreatedBy   = "Kishore Avula"
+  Project     = "Infra-automation"
   Environment = "dev"
-  Project     = "winvm"
 }
 
 vnet_address_space      = ["10.1.0.0/16"]
@@ -52,6 +51,7 @@ data_disk_lun                  = 0
 maintenance_configuration_resource_id = "/subscriptions/7a6d2623-b7d9-467b-ab2f-d71d7bf6d45d.../resourceGroups/.../providers/Microsoft.Maintenance/maintenanceConfigurations/..."
 
 # Storage Account
+deploy_storage_account           = false   # set to false to skip deploying the storage account in this environment
 storage_workload                 = "hr"          # drives the storage account name: st{location}{workload}{env}{instance}
 storage_account_kind             = "StorageV2"
 storage_account_tier             = "Standard"
