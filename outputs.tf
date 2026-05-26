@@ -53,12 +53,7 @@ output "data_disk_id" {
   value       = module.managed_disk.id
 }
 
-# Wrong — will error
-# output "storage_id" {
- # value = module.storage_account.id
-# }
-
-# Correct
 output "storage_id" {
-  value = module.storage_account[0].id
+  description = "Resource ID of the Storage Account (null when deploy_storage_account = false)"
+  value       = one(module.storage_account[*].id)
 }
