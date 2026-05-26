@@ -47,9 +47,9 @@ stages:
       displayName: 'Terraform Validate'
 
     - script: |
-        curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
-        tfsec . --soft-fail
-      displayName: 'tfsec Security Scan'
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+        trivy config . --exit-code 0
+      displayName: 'Trivy Security Scan'
 
 # ── STAGE 2: DEV ─────────────────────────────────────────────────────────────
 - stage: Dev
