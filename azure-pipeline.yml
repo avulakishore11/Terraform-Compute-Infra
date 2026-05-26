@@ -41,7 +41,7 @@ variables:
 - name: serviceConnection
   value: 'Azure-to-ADO-svc-coonection'
 - name: backendResourceGroup
-  value: 'kaseya-orgchat'
+  value: 'terrastatesa'
 - name: backendStorageAccount
   value: 'saeushrdev01'
 - name: backendContainer
@@ -56,12 +56,12 @@ variables:
 # Empty string = no -target flag = full deploy.
 # Both targets are listed explicitly — do not rely on Terraform's implicit
 # dependency resolution so it is always obvious exactly what will be deployed.
-- ${{ if eq(parameters.deployTarget, 'storage_account') }}:
-  - name: targetFlag
-    value: '-target=module.resource_group -target=module.storage_account'
-- ${{ if ne(parameters.deployTarget, 'storage_account') }}:
-  - name: targetFlag
-    value: ''
+#- ${{ if eq(parameters.deployTarget, 'storage_account') }}:
+ # - name: targetFlag
+  #  value: '-target=module.resource_group -target=module.storage_account'
+#- ${{ if ne(parameters.deployTarget, 'storage_account') }}:
+ # - name: targetFlag
+  #  value: ''
 
 
 # ══════════════════════════════════════════════════════════════════════════════
