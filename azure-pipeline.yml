@@ -8,10 +8,9 @@ trigger:
 pool:
   vmImage: ubuntu-latest
 
-# ── Pipeline variables ────────────────────────────────────────────────────────
-# admin_password: Add this as a SECRET variable in Azure DevOps UI
-#   Pipeline → Edit → Variables → add "admin_password" and lock it.
-# ─────────────────────────────────────────────────────────────────────────────
+# admin_password: add as a SECRET variable in Azure DevOps UI
+#   Pipeline → Edit → Variables → "admin_password" → lock icon
+
 variables:
 - name: serviceConnection
   value: 'Azure-to-ADO-svc-connection'
@@ -28,12 +27,11 @@ variables:
 
 stages:
 
-# ── STAGE 1: VALIDATE ────────────────────────────────────────────────────────
 - stage: Validate
   displayName: 'Validate'
   jobs:
   - job: StaticChecks
-    displayName: 'Lint and Security Scan'
+    displayName: 'Validate and Security Scan'
     steps:
 
     - task: TerraformInstaller@1
@@ -42,20 +40,19 @@ stages:
         terraformVersion: 'latest'
 
     - script: |
-        terraform init -backend=false
+        terraform init -backend=false   # skips backend auth — syntax check only, ~10x faster
         terraform validate
       displayName: 'Terraform Validate'
 
     - script: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-        trivy config . --exit-code 0
+        trivy config . --exit-code 0    # --exit-code 0: report findings but don't fail the build yet
       displayName: 'Trivy Security Scan'
 
-# ── STAGE 2: DEV ─────────────────────────────────────────────────────────────
 - stage: Dev
   displayName: 'Deploy to Dev'
   dependsOn: Validate
-  condition: and(succeeded('Validate'), ne(variables['ENABLE_DESTROY'], 'true'))
+  condition: succeeded('Validate')
   jobs:
   - job: TerraformDev
     displayName: 'Terraform Dev'
@@ -92,14 +89,13 @@ stages:
       inputs:
         provider: 'azurerm'
         command: 'apply'
-        commandOptions: '-auto-approve tfplan-dev'
+        commandOptions: '-auto-approve tfplan-dev'  # applies the saved plan file — no re-evaluation
         environmentServiceNameAzureRM: $(serviceConnection)
 
-# ── STAGE 3: UAT ─────────────────────────────────────────────────────────────
 - stage: UAT
   displayName: 'Deploy to UAT'
   dependsOn: Dev
-  condition: and(succeeded('Dev'), ne(variables['ENABLE_DESTROY'], 'true'))
+  condition: succeeded('Dev')
   variables:
     varFile: 'environments/uat.tfvars'
     stateKey: 'uat/terraform.tfstate'
@@ -148,11 +144,10 @@ stages:
               commandOptions: '-auto-approve tfplan-uat'
               environmentServiceNameAzureRM: $(serviceConnection)
 
-# ── STAGE 4: PROD ────────────────────────────────────────────────────────────
 - stage: Prod
   displayName: 'Deploy to Prod'
   dependsOn: UAT
-  condition: and(succeeded('UAT'), ne(variables['ENABLE_DESTROY'], 'true'))
+  condition: succeeded('UAT')
   variables:
     varFile: 'environments/prod.tfvars'
     stateKey: 'prod/terraform.tfstate'
@@ -200,62 +195,3 @@ stages:
               command: 'apply'
               commandOptions: '-auto-approve tfplan-prod'
               environmentServiceNameAzureRM: $(serviceConnection)
-
-# ── STAGE 5: DESTROY ─────────────────────────────────────────────────────────
-# Trigger: queue pipeline manually with variable ENABLE_DESTROY=true
-# Two gates: the variable flag + ManualValidation approval
-# ─────────────────────────────────────────────────────────────────────────────
-- stage: Destroy
-  displayName: 'Destroy Infrastructure'
-  dependsOn: Validate
-  condition: and(succeeded('Validate'), eq(variables['ENABLE_DESTROY'], 'true'))
-  jobs:
-
-  - job: ApproveDestroy
-    displayName: 'Manual Approval Gate'
-    pool: server
-    timeoutInMinutes: 60
-    steps:
-    - task: ManualValidation@0
-      displayName: 'Confirm Destroy'
-      inputs:
-        instructions: |
-          WARNING: This will permanently delete all infrastructure in $(varFile).
-          Click Resume to proceed, or Reject to abort.
-        onTimeout: 'reject'
-        timeoutInMinutes: 60
-
-  - job: TerraformDestroy
-    displayName: 'Terraform Destroy'
-    dependsOn: ApproveDestroy
-    pool:
-      vmImage: ubuntu-latest
-    steps:
-
-    - checkout: self
-
-    - task: TerraformInstaller@1
-      displayName: 'Install Terraform'
-      inputs:
-        terraformVersion: 'latest'
-
-    - task: TerraformTaskV4@4
-      displayName: 'Init (Destroy)'
-      inputs:
-        provider: 'azurerm'
-        command: 'init'
-        backendServiceArm: $(serviceConnection)
-        backendAzureRmResourceGroupName: $(backendResourceGroup)
-        backendAzureRmStorageAccountName: $(backendStorageAccount)
-        backendAzureRmContainerName: $(backendContainer)
-        backendAzureRmKey: $(stateKey)
-
-    - task: TerraformTaskV4@4
-      displayName: 'Destroy'
-      inputs:
-        provider: 'azurerm'
-        command: 'destroy'
-        commandOptions: '-auto-approve -var-file=$(varFile)'
-      env:
-        TF_VAR_admin_password: $(admin_password)
-        environmentServiceNameAzureRM: $(serviceConnection)
