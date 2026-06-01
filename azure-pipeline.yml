@@ -41,9 +41,17 @@ stages:
       inputs:
         terraformVersion: 'latest'
 
-    - script: |
-        terraform init -backend=false   # skips backend auth — syntax check only, ~10x faster
-        terraform validate
+    # Use TerraformTaskV4 so provider + module installation gets proper auth.
+    # -backend=false skips remote state — only providers and local modules are installed.
+    - task: TerraformTaskV4@4
+      displayName: 'Init (backend=false, syntax check only)'
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        commandOptions: '-backend=false'
+        backendServiceArm: $(serviceConnection)
+
+    - script: terraform validate
       displayName: 'Terraform Validate'
       env:
         TF_VAR_subscription_id: $(subscription_id)
