@@ -14,6 +14,7 @@ pool:
 #   vm_admin_password  : VM local administrator password
 
 variables:
+- group: Windows_VM_Credentials         # variable group containing subscription_id and vm_admin_password
 - name: serviceConnection
   value: 'Azure-to-ADO-svc-connection'
 - name: backendResourceGroup
