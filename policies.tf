@@ -91,7 +91,7 @@ resource "azurerm_subscription_policy_assignment" "schedule_windows_updates_ring
   subscription_id      = data.azurerm_subscription.current.id
   policy_definition_id = local.policy_schedule_updates
   enforce              = false
-  location             = "eastus"
+  location             = var.location
 
   identity {
     type         = "UserAssigned"
@@ -106,7 +106,7 @@ resource "azurerm_subscription_policy_assignment" "schedule_windows_updates_ring
       value = [{ key = "Update Ring", value = "Ring 1" }]
     }
     locations = {
-      value = ["eastus"]
+      value = ["eastus", "eastus2"]
     }
     operatingSystemTypes = {
       value = ["Windows"]
@@ -133,7 +133,7 @@ resource "azurerm_subscription_policy_assignment" "check_missing_updates_windows
   subscription_id      = data.azurerm_subscription.current.id
   policy_definition_id = local.policy_check_missing_updates
   enforce              = true
-  location             = "eastus"
+  location             = var.location
 
   identity {
     type         = "UserAssigned"
@@ -142,7 +142,7 @@ resource "azurerm_subscription_policy_assignment" "check_missing_updates_windows
 
   parameters = jsonencode({
     locations = {
-      value = ["eastus", "southcentralus", "westus2", "westus3", "centralus"]
+      value = ["eastus", "eastus2", "southcentralus", "westus2", "westus3", "centralus"]
     }
     osType = {
       value = "Windows"

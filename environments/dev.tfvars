@@ -1,7 +1,7 @@
 # ── Core ──────────────────────────────────────────────────────────────────────
 # subscription_id is a pipeline secret — passed via TF_VAR_subscription_id, not here.
 
-location    = "eastus"
+location    = "eastus2"
 environment = "dev"
 project     = "winvm"   # *** confirm with lead before changing — used in all resource names ***
 sequence    = "01"
