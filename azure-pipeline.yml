@@ -100,7 +100,7 @@ stages:
         environmentServiceNameAzureRM: $(serviceConnection)
       env:
         TF_VAR_subscription_id: $(subscription_id)
-        TF_VAR_vm_admin_password: $(vm_admin_password)
+        TF_VAR_vm_admin_password: $(admin_password)
 
     - task: TerraformTaskV4@4
       displayName: 'Apply (Dev)'
