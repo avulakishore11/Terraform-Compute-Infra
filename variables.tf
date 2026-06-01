@@ -362,17 +362,3 @@ variable "vm_os_disk_size" {
   default     = 128
 }
 
-###############################################################################
-# Workflow Variables
-###############################################################################
-variable "key_vault_name" {
-  description = "Name of the Key Vault for the Myworkflow secret-expiry notification workflow. Leave empty string to skip Key Vault connection in connections.json."
-  type        = string
-  default     = ""
-}
-
-variable "notification_email" {
-  description = "Email address to receive Key Vault secret expiry notifications (used by Myworkflow)"
-  type        = string
-  default     = "kishore.avula@kaseya.com"
-}

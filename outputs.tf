@@ -99,7 +99,16 @@ output "data_disk_id" {
 }
 
 # ── Logic App ─────────────────────────────────────────────────────────────────
-# NEW from terraform-automation
+
+output "app_service_plan_id" {
+  description = "Resource ID of the App Service Plan hosting the Logic App"
+  value       = module.logic_app.app_service_plan_id
+}
+
+output "app_service_plan_name" {
+  description = "Name of the App Service Plan hosting the Logic App"
+  value       = module.logic_app.app_service_plan_name
+}
 
 output "logic_app_name" {
   description = "Name of the Logic App Standard"

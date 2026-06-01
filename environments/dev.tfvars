@@ -1,7 +1,10 @@
+# ── Core ──────────────────────────────────────────────────────────────────────
+# subscription_id is a pipeline secret — passed via TF_VAR_subscription_id, not here.
+
 location    = "eastus"
 environment = "dev"
-project     = "winvm" # ***this IMP, so confirm with lead before changing, as it is used in naming conventions across all resources and modules***.
-instance    = "01"
+project     = "winvm"   # *** confirm with lead before changing — used in all resource names ***
+sequence    = "01"
 
 tags = {
   Department  = "CorpIT"
@@ -10,10 +13,11 @@ tags = {
   Environment = "dev"
 }
 
-vnet_address_space      = ["10.1.0.0/16"]
-subnet_address_prefixes = ["10.1.0.0/24"]
+# ── Networking ────────────────────────────────────────────────────────────────
+vnet_address_space     = ["10.1.0.0/16"]
+subnet_logicapp_prefix = "10.1.1.0/24"   # Logic App VNet integration — delegation required
+subnet_vm_prefix       = "10.1.3.0/29"   # VM subnet — /29 gives 3 usable IPs
 
-# always look confluence documentation before creating any NSG rules, we have a standard set of NSG rules that we use across all environments and projects. If you need to create custom NSG rules, please refer to the documentation and follow the guidelines for naming conventions, priority settings, and allowed protocols/ports.
 nsg_rules = [
   {
     name                       = "Allow-RDP-Internal"
@@ -37,43 +41,47 @@ routes = [
   }
 ]
 
-vm_size        = "Standard_D4s_v3"
-admin_username = "azureadmin"
+# ── Virtual Machine ───────────────────────────────────────────────────────────
+vm_size           = "Standard_D4s_v3"
+vm_admin_username = "azureadmin"
+vm_os_disk_size   = 128
+# vm_admin_password is a pipeline secret — passed via TF_VAR_vm_admin_password, not here.
 
-os_disk_size_gb              = 128
-os_disk_storage_account_type = "StandardSSD_LRS"
-
+# ── Managed Data Disk ─────────────────────────────────────────────────────────
 data_disk_size_gb              = 32
 data_disk_storage_account_type = "StandardSSD_LRS"
 data_disk_lun                  = 0
 
-# Azure Update Manager — copy the full ARM ID from Azure Portal → Maintenance Configurations
-maintenance_configuration_resource_id = "/subscriptions/7a6d2623-b7d9-467b-ab2f-d71d7bf6d45d.../resourceGroups/.../providers/Microsoft.Maintenance/maintenanceConfigurations/..."
+# ── Logic App ─────────────────────────────────────────────────────────────────
+logic_app_sku = "WS1"
 
-# Storage Account
-deploy_storage_account           = false   # set to false to skip deploying the storage account in this environment
-storage_workload                 = "hr"          # drives the storage account name: st{location}{workload}{env}{instance}
+# ── Azure Update Manager ──────────────────────────────────────────────────────
+# Copy the full ARM ID from: Azure Portal → Maintenance Configurations → your config → Properties → Resource ID
+# Leave unset (omit) to skip Update Manager policy assignment until the config is created.
+# maintenance_configuration_resource_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Maintenance/maintenanceConfigurations/..."
+
+# ── Storage Account (Terraform-managed, conditional) ─────────────────────────
+deploy_storage_account           = false
+storage_workload                 = "hr"
 storage_account_kind             = "StorageV2"
 storage_account_tier             = "Standard"
-storage_account_replication_type = "ZRS"    # Zone-redundant: survives a full AZ outage
-storage_access_tier              = "Hot"    # Optimised for frequent reads/writes
+storage_account_replication_type = "ZRS"
+storage_access_tier              = "Hot"
 
-storage_public_network_access_enabled = true   # must be true for ip_rules to take effect
-storage_shared_access_key_enabled     = true   # set false to enforce Azure AD-only auth
+storage_public_network_access_enabled = true
+storage_shared_access_key_enabled     = true
 
 blob_soft_delete_retention_days      = 7
 container_soft_delete_retention_days = 7
-storage_versioning_enabled           = false   # enable if you need point-in-time blob recovery
+storage_versioning_enabled           = false
 
-# Storage Firewall — allowed public IPs
-# Rules: bare IPv4 only (no /31 or /32 CIDR), no RFC-1918 private ranges.
-# To add a new IP: append to the list, raise a PR for review.
-# To add VNet access: use storage_subnet_ids with the subnet's Service Endpoint instead.
 storage_ip_rules = [
-  "170.55.159.52",  #— dev workstation (added 2026-05-14)
-  # "x.x.x.x",     # <Name> — <purpose> (added YYYY-MM-DD)
-  # "x.x.x.x",     # <Name> — <purpose> (added YYYY-MM-DD)
+  "170.55.159.52",  # dev workstation (added 2026-05-14)
 ]
+storage_network_bypass = ["AzureServices"]
 
-# storage_subnet_ids   = []               # add subnet resource IDs for VNet Service Endpoint access
-storage_network_bypass = ["AzureServices"] # allows Monitor, Backup, Site Recovery etc.
+# ── Workflow notifications ────────────────────────────────────────────────────
+# key_vault_name and notification_email have defaults in variables.tf.
+# Override here if needed:
+# key_vault_name     = "kv-winvm-dev-01"
+# notification_email = "kishore.avula@kaseya.com"

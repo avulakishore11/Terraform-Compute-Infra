@@ -8,8 +8,10 @@ trigger:
 pool:
   vmImage: ubuntu-latest
 
-# admin_password: add as a SECRET variable in Azure DevOps UI
-#   Pipeline → Edit → Variables → "admin_password" → lock icon
+# Pipeline secrets — add these in Azure DevOps UI:
+#   Pipeline → Edit → Variables → lock icon to mark as secret
+#   subscription_id    : Azure Subscription ID
+#   vm_admin_password  : VM local administrator password
 
 variables:
 - name: serviceConnection
@@ -43,6 +45,8 @@ stages:
         terraform init -backend=false   # skips backend auth — syntax check only, ~10x faster
         terraform validate
       displayName: 'Terraform Validate'
+      env:
+        TF_VAR_subscription_id: $(subscription_id)
 
     - script: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
@@ -82,7 +86,8 @@ stages:
         commandOptions: '-var-file=$(varFile) -out=tfplan-dev'
         environmentServiceNameAzureRM: $(serviceConnection)
       env:
-        TF_VAR_admin_password: $(admin_password)
+        TF_VAR_subscription_id: $(subscription_id)
+        TF_VAR_vm_admin_password: $(vm_admin_password)
 
     - task: TerraformTaskV4@4
       displayName: 'Apply (Dev)'
@@ -134,7 +139,8 @@ stages:
               commandOptions: '-var-file=$(varFile) -out=tfplan-uat'
               environmentServiceNameAzureRM: $(serviceConnection)
             env:
-              TF_VAR_admin_password: $(admin_password)
+              TF_VAR_subscription_id: $(subscription_id)
+              TF_VAR_vm_admin_password: $(vm_admin_password)
 
           - task: TerraformTaskV4@4
             displayName: 'Apply (UAT)'
@@ -186,7 +192,8 @@ stages:
               commandOptions: '-var-file=$(varFile) -out=tfplan-prod'
               environmentServiceNameAzureRM: $(serviceConnection)
             env:
-              TF_VAR_admin_password: $(admin_password)
+              TF_VAR_subscription_id: $(subscription_id)
+              TF_VAR_vm_admin_password: $(vm_admin_password)
 
           - task: TerraformTaskV4@4
             displayName: 'Apply (Prod)'
