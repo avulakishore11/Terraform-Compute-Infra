@@ -1,117 +1,127 @@
-locals {
-  location_abbr = {
-    "eastus"             = "eus"
-    "eastus2"            = "eus2"
-    "westus"             = "wus"
-    "westus2"            = "wus2"
-    "centralus"          = "cus"
-    "northcentralus"     = "ncus"
-    "southcentralus"     = "scus"
-    "northeurope"        = "neu"
-    "westeurope"         = "weu"
-    "uksouth"            = "uks"
-    "ukwest"             = "ukw"
-    "australiaeast"      = "aue"
-    "australiasoutheast" = "ause"
-    "southeastasia"      = "sea"
-    "eastasia"           = "ea"
-  }                           # the below naming convention is referenced in dev.tfvars
-  # suffix = {location_abbr}-{project}{environment}-{instance}
+data "azurerm_client_config" "current" {}
 
-  # fmt fix: blank line above had 2 trailing spaces; terraform fmt -check fails on trailing whitespace.
-  # full name = {resource_type}{suffix}  e.g. vmeus-winvmdev-01
-  suffix = "${local.location_abbr[var.location]}-${var.project}${var.environment}-${var.instance}"
-}
-
+###############################################################################
+# Resource Group
+###############################################################################
 module "resource_group" {
   source   = "./modules/resource_group"
-  name     = "rg${local.suffix}"
+  name     = local.resource_group_name
   location = var.location
-  tags     = var.tags
+  tags     = local.common_tags
 }
 
-module "virtual_network" {
-  source              = "./modules/virtual_network"
-  vnet_name           = "vnet${local.suffix}"
-  location            = var.location
-  resource_group_name = module.resource_group.name
-  address_space       = var.vnet_address_space
-  tags                = var.tags
+###############################################################################
+# Networking
+###############################################################################
+module "networking" {
+  source = "./modules/networking"
+
+  resource_group_name    = module.resource_group.name
+  location               = module.resource_group.location
+  vnet_name              = local.vnet_name
+  vnet_address_space     = var.vnet_address_space
+  subnet_logicapp_name   = local.subnet_logicapp_name
+  subnet_logicapp_prefix = var.subnet_logicapp_prefix
+  subnet_vm_name         = local.subnet_vm_name
+  subnet_vm_prefix       = var.subnet_vm_prefix
+  nsg_logicapp_name      = local.nsg_logicapp_name
+  nsg_vm_name            = local.nsg_vm_name
+  tags                   = local.common_tags
 }
 
-module "subnet" {
-  source               = "./modules/subnet"
-  subnet_name          = "snet${local.suffix}"
-  resource_group_name  = module.resource_group.name
-  virtual_network_name = module.virtual_network.name
-  address_prefixes     = var.subnet_address_prefixes
-}
+###############################################################################
+# Identity
+###############################################################################
 
-module "network_security_group" {
-  source              = "./modules/network_security_group"
-  nsg_name            = "nsg${local.suffix}"
-  location            = var.location
-  resource_group_name = module.resource_group.name
-  subnet_id           = module.subnet.id
-  nsg_rules           = var.nsg_rules
-  tags                = var.tags
-}
-
-module "route_table" {
-  source              = "./modules/route_table"
-  route_table_name    = "rt${local.suffix}"
-  location            = var.location
-  resource_group_name = module.resource_group.name
-  subnet_id           = module.subnet.id
-  routes              = var.routes
-  tags                = var.tags
-}
-
-module "network_interface" {
-  source              = "./modules/network_interface"
-  nic_name            = "nic${local.suffix}"
-  location            = var.location
-  resource_group_name = module.resource_group.name
-  subnet_id           = module.subnet.id
-  tags                = var.tags
-}
-
-module "virtual_machine" {
-  source              = "./modules/virtual_machine"
-  vm_name             = "vm${local.suffix}"
-  location            = var.location
-  resource_group_name = module.resource_group.name
-  vm_size             = var.vm_size
-  admin_username      = var.admin_username
-  admin_password      = var.admin_password
-  nic_id              = module.network_interface.id
-
-  os_disk_caching              = var.os_disk_caching
-  os_disk_storage_account_type = var.os_disk_storage_account_type
-  os_disk_size_gb              = var.os_disk_size_gb
-
-  image_publisher = var.image_publisher
-  image_offer     = var.image_offer
-  image_sku       = var.image_sku
-  image_version   = var.image_version
-
-  tags = var.tags
-}
-
+# Policy remediation identity — used by Azure Update Manager policies (policies.tf)
 module "policy_remediation_identity" {
   source              = "./modules/managed_identity"
-  name                = "id-policy-remediation-${local.suffix}"
-  location            = var.location
+  name                = local.policy_identity_name
+  location            = module.resource_group.location
   resource_group_name = module.resource_group.name
-  tags                = var.tags
+  tags                = local.common_tags
 }
 
-module "storage_account" {
-  count               = var.deploy_storage_account ? 1 : 0   # conditional deployment based on variable
-  source              = "./modules/storage_account"
-  storage_account_name = lower(replace("st${local.location_abbr[var.location]}-${var.storage_workload}${var.environment}-${var.instance}", "-", ""))
-  location            = var.location
+# Logic App UAMI — grants Logic App access to VM and storage (rbac.tf)
+module "identity" {
+  source = "./modules/identity"
+
   resource_group_name = module.resource_group.name
+  location            = module.resource_group.location
+  uami_name           = local.uami_name
+  tags                = local.common_tags
+}
+
+###############################################################################
+# Monitoring
+###############################################################################
+module "monitoring" {
+  source = "./modules/monitoring"
+
+  resource_group_name = module.resource_group.name
+  location            = module.resource_group.location
+  log_analytics_name  = local.log_analytics_name
+  app_insights_name   = local.app_insights_name
+  tags                = local.common_tags
+}
+
+###############################################################################
+# Virtual Machine
+###############################################################################
+module "vm" {
+  source = "./modules/vm"
+
+  resource_group_name = module.resource_group.name
+  location            = module.resource_group.location
+  subnet_id           = module.networking.subnet_vm_id
+  vm_name             = local.vm_name
+  nic_name            = local.vm_nic_name
+  disk_name           = local.vm_disk_name
+  vm_size             = var.vm_size
+  admin_username      = var.vm_admin_username
+  admin_password      = var.vm_admin_password
+  os_disk_size        = var.vm_os_disk_size
+  tags                = local.common_tags
+}
+
+###############################################################################
+# Logic App
+###############################################################################
+module "logic_app" {
+  source = "./modules/logic_app"
+
+  resource_group_name            = module.resource_group.name
+  location                       = module.resource_group.location
+  app_service_plan_name          = local.app_service_plan_name
+  logic_app_name                 = local.logic_app_name
+  logic_app_sku                  = var.logic_app_sku
+  subnet_logicapp_id             = module.networking.subnet_logicapp_id
+  # Uses the Terraform backend storage account (terrastatesa) for Logic App runtime storage.
+  # The logicapp-state container is created in storage.tf on the same account.
+  storage_account_name           = data.azurerm_storage_account.backend.name
+  storage_account_access_key     = data.azurerm_storage_account.backend.primary_access_key
+  uami_id                        = module.identity.uami_id
+  uami_client_id                 = module.identity.uami_client_id
+  app_insights_connection_string = module.monitoring.app_insights_connection_string
+  # VM context — exposed as app settings so workflows can reference the target VM
+  # without hardcoding. Use these in your startup/shutdown workflow actions.
+  vm_name           = local.vm_name
+  vm_resource_group = module.resource_group.name
+  subscription_id   = var.subscription_id
+  tags              = local.common_tags
+}
+
+###############################################################################
+# Storage Account (conditionally deployed — Terraform-managed)
+# Set deploy_storage_account = true to create; leave false when using an
+# externally managed storage account (var.storage_account_name / access_key).
+###############################################################################
+module "storage_account" {
+  count                = var.deploy_storage_account ? 1 : 0
+  source               = "./modules/storage_account"
+  storage_account_name = local.managed_storage_name
+  location             = module.resource_group.location
+  resource_group_name  = module.resource_group.name
 
   account_kind                     = var.storage_account_kind
   account_tier                     = var.storage_account_tier
@@ -127,17 +137,20 @@ module "storage_account" {
   network_rules_subnet_ids = var.storage_subnet_ids
   network_rules_bypass     = var.storage_network_bypass
 
-  tags = var.tags
+  tags = local.common_tags
 }
 
+###############################################################################
+# Managed Data Disk
+###############################################################################
 module "managed_disk" {
   source               = "./modules/managed_disk"
-  disk_name            = "disk${local.suffix}"
-  location             = var.location
+  disk_name            = local.managed_disk_name
+  location             = module.resource_group.location
   resource_group_name  = module.resource_group.name
   storage_account_type = var.data_disk_storage_account_type
   disk_size_gb         = var.data_disk_size_gb
-  vm_id                = module.virtual_machine.id
+  vm_id                = module.vm.vm_id
   lun                  = var.data_disk_lun
-  tags                 = var.tags
+  tags                 = local.common_tags
 }

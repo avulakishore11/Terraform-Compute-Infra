@@ -1,5 +1,21 @@
 # ── Common ────────────────────────────────────────────────────────────────────
 
+# NEW from terraform-automation — required by provider.tf (subscription_id = var.subscription_id)
+variable "subscription_id" {
+  description = "Azure Subscription ID — passed explicitly to the azurerm provider"
+  type        = string
+}
+
+# NEW from terraform-automation — replaces "instance" for the Kaseya naming convention.
+# DUPLICATE NOTE: root used var.instance (e.g. "01") in the old suffix local.
+#   terraform-automation uses var.sequence for the same purpose.
+#   After cross-check, keep one and remove the other.
+variable "sequence" {
+  description = "Two-digit sequence number appended to resource names (e.g. 01, 02)"
+  type        = string
+  default     = "01"
+}
+
 variable "instance" {
   description = "Two-digit instance number appended to every resource name (e.g. 01, 02)"
   type        = string
@@ -57,8 +73,9 @@ variable "vnet_address_space" {
 }
 
 variable "subnet_address_prefixes" {
-  description = "Address prefixes for the workload Subnet (CIDR). type = list(string) because a Subnet can have multiple prefixes."
+  description = "Address prefixes for the generic Subnet. Legacy — only needed when deploying the old subnet module."
   type        = list(string)
+  default     = []
 }
 
 variable "nsg_rules" {
@@ -99,14 +116,16 @@ variable "vm_size" {
 }
 
 variable "admin_username" {
-  description = "Local administrator username"
+  description = "Local administrator username (legacy — only needed when deploying the old virtual_machine module)"
   type        = string
+  default     = "azureadmin"
 }
 
 variable "admin_password" {
-  description = "Local administrator password (stored in Key Vault in production)"
+  description = "Local administrator password (legacy — only needed when deploying the old virtual_machine module)"
   type        = string
   sensitive   = true
+  default     = null
 }
 
 variable "os_disk_caching" {
@@ -116,15 +135,15 @@ variable "os_disk_caching" {
 }
 
 variable "os_disk_storage_account_type" {
-  # "storage_account_type" here refers to the underlying disk tier for Azure Managed Disks.
-  # It does NOT create a Storage Account resource — it is purely a performance/redundancy tier label.
-  description = "OS disk storage tier (Standard_LRS | StandardSSD_LRS | Premium_LRS). Overridden per environment in dev.tfvars."
+  description = "OS disk storage tier (Standard_LRS | StandardSSD_LRS | Premium_LRS). Legacy — only needed when deploying the old virtual_machine module."
   type        = string
+  default     = "StandardSSD_LRS"
 }
 
 variable "os_disk_size_gb" {
-  description = "OS disk size in GB. type = number (not string) — Terraform passes this directly to the Azure API as an integer."
+  description = "OS disk size in GB. Legacy — only needed when deploying the old virtual_machine module."
   type        = number
+  default     = 128
 }
 
 variable "image_publisher" {
@@ -154,6 +173,7 @@ variable "image_version" {
 variable "data_disk_size_gb" {
   description = "Data disk size in GB"
   type        = number
+  default     = 64
 }
 
 variable "data_disk_storage_account_type" {
@@ -163,20 +183,23 @@ variable "data_disk_storage_account_type" {
 }
 
 variable "maintenance_configuration_resource_id" {
-  description = "ARM resource ID of the Azure Update Manager maintenance configuration used for scheduling Windows updates (Ring 1)."
+  description = "ARM resource ID of the Azure Update Manager maintenance configuration. Only required when deploying policies.tf Update Manager assignments."
   type        = string
+  default     = null
 }
 
 variable "data_disk_lun" {
   description = "Logical Unit Number for the data disk"
   type        = number
+  default     = 0
 }
 
 # ── Storage Account ───────────────────────────────────────────────────────────
 
 variable "storage_workload" {
-  description = "Team or workload identifier used in the storage account name (e.g. hr, finance, ops). Kept separate from var.project so storage naming is independent of VM naming."
+  description = "Team or workload identifier used in the managed storage account name (e.g. hr, finance, ops). Only needed when deploy_storage_account = true."
   type        = string
+  default     = ""
 }
 
 variable "storage_account_kind" {
@@ -255,4 +278,86 @@ variable "deploy_storage_account" {
   description = "Whether to deploy the storage account"
   type        = bool
   default     = false
+}
+
+###############################################################################
+# NEW from terraform-automation — Logic App networking
+# DUPLICATE NOTE: root had var.subnet_address_prefixes (single generic subnet).
+#   terraform-automation splits this into two purpose-specific subnet CIDRs.
+#   After cross-check, remove var.subnet_address_prefixes if using the
+#   networking module (which uses subnet_logicapp_prefix + subnet_vm_prefix).
+###############################################################################
+
+variable "subnet_logicapp_prefix" {
+  description = "Logic App VNet integration subnet CIDR prefix"
+  type        = string
+  default     = "10.1.1.0/24"
+}
+
+variable "subnet_vm_prefix" {
+  description = "VM subnet CIDR prefix — /29 gives 3 usable IPs"
+  type        = string
+  default     = "10.1.3.0/29"
+}
+
+###############################################################################
+# NEW from terraform-automation — Logic App (externally managed storage)
+# DUPLICATE NOTE: root had a full storage_account module with many config vars.
+#   terraform-automation treats the storage account as external (pre-existing)
+#   and only requires its name, access key, and resource ID.
+#   After cross-check, decide whether to manage storage via Terraform or externally.
+###############################################################################
+
+variable "storage_account_name" {
+  description = "Name of the existing Storage Account used by Logic App Standard"
+  type        = string
+  default     = null
+}
+
+variable "storage_account_access_key" {
+  description = "Primary access key of the existing Storage Account for Logic App"
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "storage_account_id" {
+  description = "Resource ID of the existing Storage Account (used for RBAC assignment)"
+  type        = string
+  default     = null
+}
+
+variable "logic_app_sku" {
+  description = "App Service Plan SKU for Logic App Standard (WS1, WS2, WS3)"
+  type        = string
+  default     = "WS1"
+}
+
+###############################################################################
+# NEW from terraform-automation — VM credentials (renamed convention)
+# DUPLICATE NOTE: root has var.admin_username / var.admin_password.
+#   terraform-automation uses var.vm_admin_username / var.vm_admin_password
+#   for the same purpose. After cross-check, align on one naming convention
+#   and update module "vm" accordingly.
+###############################################################################
+
+variable "vm_admin_username" {
+  description = "VM administrator username (terraform-automation convention)"
+  type        = string
+  default     = "azureadmin"
+}
+
+variable "vm_admin_password" {
+  description = "VM administrator password (terraform-automation convention)"
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+# DUPLICATE NOTE: root has var.os_disk_size_gb; terraform-automation uses var.vm_os_disk_size.
+#   Both control the VM OS disk size. After cross-check, keep one and remove the other.
+variable "vm_os_disk_size" {
+  description = "VM OS disk size in GB (terraform-automation convention)"
+  type        = number
+  default     = 128
 }
