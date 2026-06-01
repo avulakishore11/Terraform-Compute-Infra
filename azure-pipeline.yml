@@ -43,13 +43,18 @@ stages:
 
     # Use TerraformTaskV4 so provider + module installation gets proper auth.
     # -backend=false skips remote state — only providers and local modules are installed.
+    # Backend params are required by the task's own input validation even with -backend=false.
     - task: TerraformTaskV4@4
-      displayName: 'Init (backend=false, syntax check only)'
+      displayName: 'Init 
       inputs:
         provider: 'azurerm'
         command: 'init'
-        commandOptions: '-backend=false'
+        #commandOptions: '-backend=false'
         backendServiceArm: $(serviceConnection)
+        backendAzureRmResourceGroupName: $(backendResourceGroup)
+        backendAzureRmStorageAccountName: $(backendStorageAccount)
+        backendAzureRmContainerName: $(backendContainer)
+        backendAzureRmKey: $(stateKey)
 
     - script: terraform validate
       displayName: 'Terraform Validate'
