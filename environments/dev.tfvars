@@ -61,7 +61,7 @@ logic_app_sku = "WS1"
 # maintenance_configuration_resource_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Maintenance/maintenanceConfigurations/..."
 
 # ── Storage Account (Terraform-managed, conditional) ─────────────────────────
-deploy_storage_account           = false
+deploy_storage_account           = true
 storage_workload                 = "hr"
 storage_account_kind             = "StorageV2"
 storage_account_tier             = "Standard"

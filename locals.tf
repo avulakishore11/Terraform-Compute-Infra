@@ -52,6 +52,8 @@ locals {
   managed_disk_name     = "disk-${local.vm_name}"
   # Storage account names cannot contain dashes — lower() enforced by Azure API.
   managed_storage_name  = lower(replace("st${local.region}${var.storage_workload}${var.environment}${var.sequence}", "-", ""))
+  # Dedicated storage account for Logic App Standard runtime (workflow state, triggers, artifacts).
+  logicapp_storage_name = lower(replace("stla${local.region}${var.environment}${var.sequence}", "-", ""))
 
   # ── Common tags applied to every resource ───────────────────────────────────
   common_tags = merge(

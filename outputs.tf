@@ -149,3 +149,14 @@ output "storage_id" {
   description = "Resource ID of the Terraform-managed Storage Account (null when deploy_storage_account = false)"
   value       = one(module.storage_account[*].id)
 }
+
+# ── Logic App Storage ─────────────────────────────────────────────────────────
+output "logicapp_storage_name" {
+  description = "Name of the dedicated Logic App storage account"
+  value       = azurerm_storage_account.logicapp.name
+}
+
+output "logicapp_storage_id" {
+  description = "Resource ID of the dedicated Logic App storage account"
+  value       = azurerm_storage_account.logicapp.id
+}

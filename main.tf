@@ -96,21 +96,17 @@ module "logic_app" {
   logic_app_name                 = local.logic_app_name
   logic_app_sku                  = var.logic_app_sku
   subnet_logicapp_id             = module.networking.subnet_logicapp_id
-  # Uses the Terraform backend storage account (terrastatesa) for Logic App runtime storage.
-  # The logicapp-state container is created in storage.tf on the same account.
-  storage_account_name           = data.azurerm_storage_account.backend.name
-  storage_account_access_key     = data.azurerm_storage_account.backend.primary_access_key
+  storage_account_name           = azurerm_storage_account.logicapp.name
+  storage_account_access_key     = azurerm_storage_account.logicapp.primary_access_key
   uami_id                        = module.identity.uami_id
   uami_client_id                 = module.identity.uami_client_id
   app_insights_connection_string = module.monitoring.app_insights_connection_string
-  # VM context — exposed as app settings so workflows can reference the target VM
-  # without hardcoding. Use these in your startup/shutdown workflow actions.
-  #vm_name           = local.vm_name
-  #v#m_resource_group = module.resource_group.name
-  #ubscription_id   = var.subscription_id
-  #uami_resource_id  = module.identity.uami_id
-  #tags              = local.common_tags
-#}
+  vm_name           = local.vm_name
+  vm_resource_group = module.resource_group.name
+  subscription_id   = var.subscription_id
+  uami_resource_id  = module.identity.uami_id
+  tags              = local.common_tags
+}
 
 ###############################################################################
 # Storage Account (conditionally deployed — Terraform-managed)

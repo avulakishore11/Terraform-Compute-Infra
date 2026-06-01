@@ -1,19 +1,32 @@
 ###############################################################################
-# Backend Storage Account — referenced, not created by Terraform.
-# Name and resource group match the backend block in backedn-versions.tf.
-# Used by Logic App Standard as its runtime storage, and hosts the
-# logicapp-state container for workflow state.
+# Logic App Storage Account — dedicated, always created with the Logic App.
+# Logic App Standard requires a storage account for runtime state, triggers,
+# and workflow artifacts. shared_access_key_enabled MUST be true — the
+# azurerm_logic_app_standard resource authenticates via storage account key.
 ###############################################################################
 
-data "azurerm_storage_account" "backend" {
-  name                = "terrastatesa"
-  resource_group_name = "rgeus-tftest-01"
-}
+resource "azurerm_storage_account" "logicapp" {
+  name                     = local.logicapp_storage_name
+  resource_group_name      = module.resource_group.name
+  location                 = module.resource_group.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"   # increase to ZRS/GRS for UAT/Prod
+  account_kind             = "StorageV2"
 
-# Dedicated container for Logic App workflow state.
-# The Terraform state files use the "tfstate" container (in backedn-versions.tf).
-# This keeps Logic App state separate on the same storage account.
-resource "azurerm_storage_container" "logicapp_state" {
-  name               = "logicapp-state"
-  storage_account_id = data.azurerm_storage_account.backend.id
+  # Key auth required — Logic App Standard uses the storage account key internally.
+  shared_access_key_enabled        = true
+  public_network_access_enabled    = false
+  https_traffic_only_enabled       = true
+  min_tls_version                  = "TLS1_2"
+
+  blob_properties {
+    delete_retention_policy {
+      days = 7
+    }
+    container_delete_retention_policy {
+      days = 7
+    }
+  }
+
+  tags = local.common_tags
 }
