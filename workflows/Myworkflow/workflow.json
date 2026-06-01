@@ -1,0 +1,126 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "triggers": {
+      "When_an_HTTP_request_is_received": {
+        "type": "Request",
+        "kind": "Http",
+        "description": "Receives Event Grid webhook notifications for Key Vault SecretNearExpiry and SecretExpired events"
+      }
+    },
+    "actions": {
+      "Parse_Event_Grid_Payload": {
+        "type": "ParseJson",
+        "description": "Parse the incoming Event Grid event array from Key Vault system topic",
+        "inputs": {
+          "content": "@triggerBody()",
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id":          { "type": "string" },
+                "topic":       { "type": "string" },
+                "subject":     { "type": "string" },
+                "eventType":   { "type": "string" },
+                "eventTime":   { "type": "string" },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "Id":         { "type": "string" },
+                    "VaultName":  { "type": "string" },
+                    "ObjectType": { "type": "string" },
+                    "ObjectName": { "type": "string" },
+                    "Version":    { "type": "string" },
+                    "NBF":        {},
+                    "EXP":        { "type": "integer" }
+                  }
+                },
+                "dataVersion":    { "type": "string" },
+                "metadataVersion":{ "type": "string" }
+              }
+            }
+          }
+        },
+        "runAfter": {}
+      },
+      "For_each_event": {
+        "type": "Foreach",
+        "description": "Iterate over each Key Vault event sequentially to prevent parallel email flooding",
+        "operationOptions": "Sequential",
+        "foreach": "@body('Parse_Event_Grid_Payload')",
+        "actions": {
+          "Check_Secret_Event_Type": {
+            "type": "If",
+            "description": "Guard: only process SecretNearExpiry and SecretExpired events — skip all others",
+            "expression": {
+              "or": [
+                { "equals": ["@items('For_each_event')?['eventType']", "Microsoft.KeyVault.SecretNearExpiry"] },
+                { "equals": ["@items('For_each_event')?['eventType']", "Microsoft.KeyVault.SecretExpired"] }
+              ]
+            },
+            "actions": {
+              "Get_Secret_From_KeyVault": {
+                "type": "ServiceProvider",
+                "description": "Retrieve secret metadata from Key Vault using UAMI (uami-logicapp-storage-dev). Validates KV connectivity before sending email.",
+                "inputs": {
+                  "parameters": {
+                    "secretName": "@items('For_each_event')?['data']?['ObjectName']"
+                  },
+                  "serviceProviderConfiguration": {
+                    "connectionName": "keyVault",
+                    "operationId": "getSecret",
+                    "serviceProviderId": "/serviceProviders/keyVault"
+                  }
+                },
+                "runAfter": {}
+              },
+              "Compose_Expiry_Date": {
+                "type": "Compose",
+                "description": "Convert EXP Unix timestamp (seconds since 1970-01-01) to ISO 8601 datetime",
+                "inputs": "@addSeconds('1970-01-01T00:00:00Z', int(items('For_each_event')?['data']?['EXP']))",
+                "runAfter": { "Get_Secret_From_KeyVault": ["SUCCEEDED"] }
+              },
+              "Compose_Days_Remaining": {
+                "type": "Compose",
+                "description": "Calculate days until expiry. Negative = already expired.",
+                "inputs": "@div(sub(ticks(outputs('Compose_Expiry_Date')), ticks(utcNow())), 864000000000)",
+                "runAfter": { "Compose_Expiry_Date": ["SUCCEEDED"] }
+              },
+              "Compose_Severity": {
+                "type": "Compose",
+                "description": "Classify: EXPIRED | CRITICAL (<=7d) | HIGH (<=14d) | WARNING (<=30d)",
+                "inputs": "@if(equals(items('For_each_event')?['eventType'], 'Microsoft.KeyVault.SecretExpired'), 'EXPIRED', if(lessOrEquals(int(outputs('Compose_Days_Remaining')), 7), 'CRITICAL', if(lessOrEquals(int(outputs('Compose_Days_Remaining')), 14), 'HIGH', 'WARNING')))",
+                "runAfter": { "Compose_Days_Remaining": ["SUCCEEDED"] }
+              },
+              "Send_Expiry_Notification_Email": {
+                "type": "ApiConnection",
+                "description": "Send formatted HTML secret expiry notification. Recipient set from __NOTIFICATION_EMAIL__ at deploy time.",
+                "inputs": {
+                  "host": {
+                    "connection": { "referenceName": "office365" }
+                  },
+                  "method": "post",
+                  "body": {
+                    "To": "__NOTIFICATION_EMAIL__",
+                    "Subject": "@{outputs('Compose_Severity')} | Secret: @{items('For_each_event')?['data']?['ObjectName']} | Vault: @{items('For_each_event')?['data']?['VaultName']}",
+                    "Body": "<html><body style=\"font-family:Segoe UI,Arial,sans-serif;background:#f4f4f4;padding:20px;\"><div style=\"max-width:620px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;\"><div style=\"background:#0078D4;padding:24px 32px;\"><h1 style=\"color:#fff;margin:0;font-size:20px;font-weight:600;\">Key Vault Secret Expiry Alert</h1><p style=\"color:#cce4f6;margin:8px 0 0;font-size:13px;\">Automated notification</p></div><div style=\"padding:10px 32px;background:#FFF4CE;border-left:4px solid #FFB900;\"><p style=\"margin:8px 0;font-weight:700;\">@{outputs('Compose_Severity')}</p></div><div style=\"padding:28px 32px;\"><table style=\"width:100%;border-collapse:collapse;font-size:13px;\"><tr><td style=\"padding:10px 0;color:#666;width:38%;border-bottom:1px solid #f0f0f0;\">Secret Name</td><td style=\"padding:10px 0;font-weight:600;border-bottom:1px solid #f0f0f0;\">@{items('For_each_event')?['data']?['ObjectName']}</td></tr><tr><td style=\"padding:10px 0;color:#666;border-bottom:1px solid #f0f0f0;\">Vault Name</td><td style=\"padding:10px 0;border-bottom:1px solid #f0f0f0;\">@{items('For_each_event')?['data']?['VaultName']}</td></tr><tr><td style=\"padding:10px 0;color:#666;border-bottom:1px solid #f0f0f0;\">Expiry Date (UTC)</td><td style=\"padding:10px 0;font-weight:600;color:#D83B01;border-bottom:1px solid #f0f0f0;\">@{formatDateTime(outputs('Compose_Expiry_Date'), 'dddd, MMMM d yyyy')} UTC</td></tr><tr><td style=\"padding:10px 0;color:#666;border-bottom:1px solid #f0f0f0;\">Days Remaining</td><td style=\"padding:10px 0;font-weight:600;color:#D83B01;border-bottom:1px solid #f0f0f0;\">@{outputs('Compose_Days_Remaining')} days</td></tr><tr><td style=\"padding:10px 0;color:#666;border-bottom:1px solid #f0f0f0;\">Event Type</td><td style=\"padding:10px 0;border-bottom:1px solid #f0f0f0;\">@{items('For_each_event')?['eventType']}</td></tr><tr><td style=\"padding:10px 0;color:#666;\">Alert Time</td><td style=\"padding:10px 0;\">@{items('For_each_event')?['eventTime']}</td></tr></table><div style=\"margin-top:24px;padding:16px;background:#f8f9fa;border-radius:6px;border-left:4px solid #0078D4;\"><p style=\"margin:0 0 6px;font-weight:600;font-size:13px;\">Action Required</p><p style=\"margin:0;font-size:13px;color:#444;\">Rotate or renew secret <strong>@{items('For_each_event')?['data']?['ObjectName']}</strong> in vault <strong>@{items('For_each_event')?['data']?['VaultName']}</strong>.</p></div></div><div style=\"background:#f4f4f4;padding:14px 32px;border-top:1px solid #e0e0e0;\"><p style=\"margin:0;font-size:11px;color:#999;\">Automated alert | Logic App | Do not reply.</p></div></div></body></html>",
+                    "Importance": "High"
+                  },
+                  "path": "/v2/Mail"
+                },
+                "runAfter": { "Compose_Severity": ["SUCCEEDED"] }
+              }
+            },
+            "else": { "actions": {} },
+            "runAfter": {}
+          }
+        },
+        "runAfter": { "Parse_Event_Grid_Payload": ["SUCCEEDED"] }
+      }
+    },
+    "outputs": {}
+  },
+  "kind": "stateful"
+}

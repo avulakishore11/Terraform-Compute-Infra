@@ -1,0 +1,68 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "triggers": {
+      "Recurrence": {
+        "type": "Recurrence",
+        "description": "Fires daily at 5:30 PM Eastern Time to start the automation VM",
+        "recurrence": {
+          "interval": 1,
+          "frequency": "Day",
+          "timeZone": "Eastern Standard Time",
+          "schedule": { "hours": [17], "minutes": [30] }
+        }
+      }
+    },
+    "actions": {
+      "HTTP": {
+        "type": "Http",
+        "description": "POST to ARM REST API to start __VM_NAME__ using UAMI managed identity. VM context is read from app settings so this workflow works across environments without changes.",
+        "inputs": {
+          "uri": "https://management.azure.com/subscriptions/@{appsetting('AZURE_SUBSCRIPTION_ID')}/resourceGroups/@{appsetting('VM_RESOURCE_GROUP')}/providers/Microsoft.Compute/virtualMachines/@{appsetting('VM_NAME')}/start?api-version=2024-03-01",
+          "method": "POST",
+          "authentication": {
+            "type": "ManagedServiceIdentity",
+            "identity": "__UAMI_RESOURCE_ID__",
+            "audience": "https://management.azure.com"
+          }
+        },
+        "runAfter": {},
+        "runtimeConfiguration": {
+          "contentTransfer": { "transferMode": "Chunked" }
+        }
+      },
+      "Condition": {
+        "type": "If",
+        "description": "200 = VM already running (no-op), 202 = start accepted async. Both indicate success.",
+        "expression": {
+          "or": [
+            { "equals": ["@outputs('HTTP')['statusCode']", 200] },
+            { "equals": ["@outputs('HTTP')['statusCode']", 202] }
+          ]
+        },
+        "actions": {
+          "Compose_Success": {
+            "type": "Compose",
+            "description": "Log VM start success",
+            "inputs": "SUCCESS | VM start accepted | VM: @{appsetting('VM_NAME')} | Status: @{outputs('HTTP')['statusCode']} | Time: @{utcNow()}"
+          }
+        },
+        "else": {
+          "actions": {
+            "Compose_Failure": {
+              "type": "Compose",
+              "description": "Log VM start failure for troubleshooting",
+              "inputs": "FAILED | VM start rejected | VM: @{appsetting('VM_NAME')} | Status: @{outputs('HTTP')['statusCode']} | Time: @{utcNow()}"
+            }
+          }
+        },
+        "runAfter": {
+          "HTTP": ["SUCCEEDED", "FAILED", "TIMEDOUT"]
+        }
+      }
+    },
+    "outputs": {}
+  },
+  "kind": "stateful"
+}

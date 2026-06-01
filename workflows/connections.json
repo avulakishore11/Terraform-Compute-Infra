@@ -1,0 +1,28 @@
+{
+  "managedApiConnections": {
+    "office365": {
+      "api": {
+        "id": "/subscriptions/__SUBSCRIPTION_ID__/providers/Microsoft.Web/locations/__LOCATION__/managedApis/office365"
+      },
+      "connection": {
+        "id": "/subscriptions/__SUBSCRIPTION_ID__/resourceGroups/__RESOURCE_GROUP__/providers/Microsoft.Web/connections/office365-1"
+      },
+      "authentication": {
+        "type": "ManagedServiceIdentity"
+      },
+      "connectionRuntimeUrl": ""
+    }
+  },
+  "serviceProviderConnections": {
+    "keyVault": {
+      "parameterValues": {
+        "vaultName": "__KEY_VAULT_NAME__"
+      },
+      "serviceProvider": {
+        "id": "/serviceProviders/keyVault"
+      },
+      "displayName": "__KEY_VAULT_NAME__"
+    }
+  },
+  "agentConnections": {}
+}

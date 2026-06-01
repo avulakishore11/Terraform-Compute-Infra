@@ -64,3 +64,8 @@ variable "subscription_id" {
   description = "Azure Subscription ID — used by workflow HTTP actions targeting Azure REST API"
   type        = string
 }
+
+variable "uami_resource_id" {
+  description = "Full ARM resource ID of the UAMI — exposed as UAMI_RESOURCE_ID app setting so workflows can reference it in HTTP action authentication without hardcoding"
+  type        = string
+}

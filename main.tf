@@ -108,6 +108,7 @@ module "logic_app" {
   vm_name           = local.vm_name
   vm_resource_group = module.resource_group.name
   subscription_id   = var.subscription_id
+  uami_resource_id  = module.identity.uami_id
   tags              = local.common_tags
 }
 

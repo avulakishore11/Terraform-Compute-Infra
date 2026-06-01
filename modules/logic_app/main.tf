@@ -36,6 +36,9 @@ resource "azurerm_logic_app_standard" "main" {
     "AZURE_SUBSCRIPTION_ID" = var.subscription_id
     "VM_RESOURCE_GROUP"     = var.vm_resource_group
     "VM_NAME"               = var.vm_name
+    # Full UAMI resource ID — used in workflow HTTP action authentication blocks.
+    # Avoids hardcoding the UAMI path in workflow JSON across environments.
+    "UAMI_RESOURCE_ID"      = var.uami_resource_id
   }
 
   site_config {
