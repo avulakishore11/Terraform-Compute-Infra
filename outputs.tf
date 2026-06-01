@@ -80,17 +80,17 @@ output "uami_principal_id" {
 
 output "vm_id" {
   description = "Resource ID of the Windows VM"
-  value       = module.vm.vm_id
+  value       = module.virtual_machine.id
 }
 
 output "vm_name" {
   description = "Name of the Windows VM"
-  value       = module.vm.vm_name
+  value       = module.virtual_machine.name
 }
 
 output "vm_private_ip" {
   description = "Private IP address of the VM (no public IP — connect via Bastion or VPN)"
-  value       = module.vm.private_ip
+  value       = module.network_interface.private_ip_address
 }
 
 output "data_disk_id" {

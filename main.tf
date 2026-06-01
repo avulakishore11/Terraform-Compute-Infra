@@ -68,20 +68,34 @@ module "monitoring" {
 ###############################################################################
 # Virtual Machine
 ###############################################################################
+module "network_interface" {
+  source = "./modules/network_interface"
+
+  nic_name            = local.vm_nic_name
+  location            = module.resource_group.location
+  resource_group_name = module.resource_group.name
+  subnet_id           = module.networking.subnet_vm_id
+  tags                = local.common_tags
+}
+
 module "virtual_machine" {
   source = "./modules/virtual_machine"
 
-  resource_group_name = module.resource_group.name
-  location            = module.resource_group.location
-  subnet_id           = module.networking.subnet_vm_id
-  vm_name             = local.vm_name
-  nic_name            = local.vm_nic_name
-  disk_name           = local.vm_disk_name
-  vm_size             = var.vm_size
-  admin_username      = var.vm_admin_username
-  admin_password      = var.vm_admin_password
-  os_disk_size        = var.vm_os_disk_size
-  tags                = local.common_tags
+  resource_group_name          = module.resource_group.name
+  location                     = module.resource_group.location
+  vm_name                      = local.vm_name
+  vm_size                      = var.vm_size
+  admin_username               = var.vm_admin_username
+  admin_password               = var.vm_admin_password
+  nic_id                       = module.network_interface.id
+  os_disk_caching              = var.os_disk_caching
+  os_disk_storage_account_type = var.os_disk_storage_account_type
+  os_disk_size_gb              = var.vm_os_disk_size
+  image_publisher              = var.image_publisher
+  image_offer                  = var.image_offer
+  image_sku                    = var.image_sku
+  image_version                = var.image_version
+  tags                         = local.common_tags
 }
 
 ###############################################################################
@@ -147,7 +161,7 @@ module "managed_disk" {
   resource_group_name  = module.resource_group.name
   storage_account_type = var.data_disk_storage_account_type
   disk_size_gb         = var.data_disk_size_gb
-  vm_id                = module.vm.vm_id
+  vm_id                = module.virtual_machine.id
   lun                  = var.data_disk_lun
   tags                 = local.common_tags
 }

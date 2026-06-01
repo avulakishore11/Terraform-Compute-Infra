@@ -4,7 +4,7 @@
 
 # Allows Logic App (via UAMI) to start/deallocate the automation VM
 resource "azurerm_role_assignment" "uami_vm_contributor" {
-  scope                = module.vm.vm_id
+  scope                = module.virtual_machine.id
   role_definition_name = "Virtual Machine Contributor"
   principal_id         = module.identity.uami_principal_id
   description          = "Allows UAMI to start and deallocate the automation VM via Logic App workflows"
