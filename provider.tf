@@ -28,8 +28,6 @@ terraform {
 # Merged here. Key difference: terraform-automation passed subscription_id explicitly
 # and set prevent_deletion_if_contains_resources = false.
 provider "azurerm" {
-  subscription_id = var.subscription_id
-
   features {
     resource_group {
       # Allows terraform destroy to succeed even when the RG still contains resources.
