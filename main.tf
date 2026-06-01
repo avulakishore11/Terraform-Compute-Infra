@@ -68,7 +68,7 @@ module "monitoring" {
 ###############################################################################
 # Virtual Machine
 ###############################################################################
-module "vm" {
+module "virtual_machine" {
   source = "./modules/vm"
 
   resource_group_name = module.resource_group.name
