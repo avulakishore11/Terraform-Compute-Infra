@@ -159,7 +159,9 @@ module "storage_account" {
   versioning_enabled                   = var.storage_versioning_enabled
 
   network_rules_ip_rules   = var.storage_ip_rules
-  network_rules_subnet_ids = var.storage_subnet_ids
+  # Always include the Logic App subnet so VNet-integrated access works
+  # regardless of whether public_network_access_enabled is true or false.
+  network_rules_subnet_ids = concat(var.storage_subnet_ids, [module.networking.subnet_logicapp_id])
   network_rules_bypass     = var.storage_network_bypass
 
   tags = local.common_tags

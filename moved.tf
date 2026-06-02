@@ -43,12 +43,24 @@ moved {
 
 moved {
   from = module.logic_app.azurerm_service_plan.main
-  to   = module.logic_app.azurerm_service_plan.plan
+  to   = module.logic_app.azurerm_service_plan.logicappservice_plan
+}
+
+moved {
+  from = module.logic_app.azurerm_service_plan.plan
+  to   = module.logic_app.azurerm_service_plan.logicappservice_plan
 }
 
 moved {
   from = module.logic_app.azurerm_logic_app_standard.main
   to   = module.logic_app.azurerm_logic_app_standard.logic_app
+}
+
+# ── Storage account module rename ─────────────────────────────────────────────
+
+moved {
+  from = module.storage_account.azurerm_storage_account.this
+  to   = module.storage_account.azurerm_storage_account.storage_account
 }
 
 # ── Resource Group module rename ─────────────────────────────────────────────
