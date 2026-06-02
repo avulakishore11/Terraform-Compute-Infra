@@ -51,6 +51,13 @@ moved {
   to   = module.logic_app.azurerm_logic_app_standard.logic_app
 }
 
+# ── Resource Group module rename ─────────────────────────────────────────────
+
+moved {
+  from = module.resource_group.azurerm_resource_group.this
+  to   = module.resource_group.azurerm_resource_group.resource_group
+}
+
 # ── Storage account consolidation ─────────────────────────────────────────────
 
 moved {
