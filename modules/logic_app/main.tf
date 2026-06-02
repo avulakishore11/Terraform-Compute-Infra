@@ -37,7 +37,8 @@ resource "azurerm_logic_app_standard" "main" {
     # Explicitly set the content share so the App Service control plane does not
     # attempt to create it. The share is pre-created by azurerm_storage_share in
     # storage.tf; without this the control plane creation attempt returns 403.
-    "WEBSITE_CONTENTSHARE"  = var.content_share_name
+    # "WEBSITE_CONTENTSHARE"  = var.content_share_name  by adding this got an error like: with name WEBSITE_CONTENTSHARE already exists.","Target":null,"Details":[{"Message":"Parameter with name WEBSITE_CONTENTSHARE already exists."},{"Code":"Conflict"},{"ErrorEntity":{"ExtendedCode":"01013","MessageTemplate":"Parameter with name {0} already exists.","Parameters":["WEBSITE_CONTENTSHARE"],"Code":"Conflict","Message":"Parameter with name WEBSITE_CONTENTSHARE already exists."}}],"Innererror":null}
+
   }
 
   site_config {
