@@ -1,9 +1,9 @@
 output "app_service_plan_id" {
-  value = azurerm_service_plan.logicapp_plan.id
+  value = azurerm_service_plan.logicappservice_plan.id
 }
 
 output "app_service_plan_name" {
-  value = azurerm_service_plan.logicapp_plan.name
+  value = azurerm_service_plan.logicappservice_plan.name
 }
 
 output "logic_app_id" {
