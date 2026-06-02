@@ -16,20 +16,6 @@ locals {
   region_short = {
     "eastus"             = "eus"
     "eastus2"            = "eus2"
-    "westus"             = "wus"
-    "westus2"            = "wus2"
-    "centralus"          = "cus"
-    "northcentralus"     = "ncus"
-    "southcentralus"     = "scus"
-    "northeurope"        = "neu"
-    "westeurope"         = "weu"
-    "uksouth"            = "uks"
-    "ukwest"             = "ukw"
-    "australiaeast"      = "aue"
-    "australiasoutheast" = "ause"
-    "southeastasia"      = "sea"
-    "eastasia"           = "ea"
-    "canadacentral"      = "ccan"
   }
   region = lookup(local.region_short, var.location, replace(var.location, " ", ""))
 

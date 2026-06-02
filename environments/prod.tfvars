@@ -1,7 +1,10 @@
+# ── Core ──────────────────────────────────────────────────────────────────────
+# subscription_id is a pipeline secret — passed via TF_VAR_subscription_id
+
 location    = "eastus"
 environment = "prod"
 project     = "winvm"
-instance    = "01"
+sequence    = "01"
 
 tags = {
   Department  = "CorpIT"
@@ -10,8 +13,10 @@ tags = {
   Environment = "prod"
 }
 
-vnet_address_space      = ["10.3.0.0/16"]
-subnet_address_prefixes = ["10.3.0.0/24"]
+# ── Networking ────────────────────────────────────────────────────────────────
+vnet_address_space     = ["10.3.0.0/16"]
+subnet_logicapp_prefix = "10.3.1.0/24"
+subnet_vm_prefix       = "10.3.3.0/29"
 
 nsg_rules = [
   {
@@ -36,16 +41,32 @@ routes = [
   }
 ]
 
-vm_size        = "Standard_D4s_v3"
-admin_username = "azureadmin"
+# ── Virtual Machine ───────────────────────────────────────────────────────────
+# vm_admin_password is a pipeline secret — passed via TF_VAR_vm_admin_password
 
-os_disk_size_gb              = 350
+vm_size                      = "Standard_D4s_v3"
+vm_admin_username            = "azureadmin"
+vm_os_disk_size              = 350
+os_disk_caching              = "ReadWrite"
 os_disk_storage_account_type = "Premium_LRS"
+image_publisher              = "MicrosoftWindowsServer"
+image_offer                  = "WindowsServer"
+image_sku                    = "2022-Datacenter"
+image_version                = "latest"
 
+# ── Managed Data Disk ─────────────────────────────────────────────────────────
 data_disk_size_gb              = 256
 data_disk_storage_account_type = "Premium_LRS"
 data_disk_lun                  = 0
 
+# ── Logic App ─────────────────────────────────────────────────────────────────
+logic_app_sku = "WS2"
+
+# ── Azure Update Manager ──────────────────────────────────────────────────────
+# Uncomment and set once a maintenance configuration exists in Azure Update Manager.
+# maintenance_configuration_resource_id = "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.Maintenance/maintenanceConfigurations/<name>"
+
+# ── Storage Account (optional application data storage) ──────────────────────
 deploy_storage_account           = false
 storage_workload                 = "hr"
 storage_account_kind             = "StorageV2"
@@ -61,6 +82,5 @@ container_soft_delete_retention_days = 30
 storage_versioning_enabled           = true
 
 storage_ip_rules       = []
+storage_subnet_ids     = []
 storage_network_bypass = ["AzureServices"]
-
-# maintenance_configuration_resource_id = "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.Maintenance/maintenanceConfigurations/<name>"

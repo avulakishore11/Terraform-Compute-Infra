@@ -1,9 +1,9 @@
 # ── Core ──────────────────────────────────────────────────────────────────────
-# subscription_id is a pipeline secret — passed via TF_VAR_subscription_id, not here.
+# subscription_id is a pipeline secret — passed via TF_VAR_subscription_id
 
 location    = "eastus2"
 environment = "dev"
-project     = "winvm"   # *** confirm with lead before changing — used in all resource names ***
+project     = "winvm"
 sequence    = "01"
 
 tags = {
@@ -15,8 +15,8 @@ tags = {
 
 # ── Networking ────────────────────────────────────────────────────────────────
 vnet_address_space     = ["10.1.0.0/16"]
-subnet_logicapp_prefix = "10.1.1.0/24"   # Logic App VNet integration — delegation required
-subnet_vm_prefix       = "10.1.3.0/29"   # VM subnet — /29 gives 3 usable IPs
+subnet_logicapp_prefix = "10.1.1.0/24"
+subnet_vm_prefix       = "10.1.3.0/29"
 
 nsg_rules = [
   {
@@ -42,10 +42,17 @@ routes = [
 ]
 
 # ── Virtual Machine ───────────────────────────────────────────────────────────
-vm_size           = "Standard_D4s_v3"
-vm_admin_username = "azureadmin"
-vm_os_disk_size   = 128
-# vm_admin_password is a pipeline secret — passed via TF_VAR_vm_admin_password, not here.
+# vm_admin_password is a pipeline secret — passed via TF_VAR_vm_admin_password
+
+vm_size                      = "Standard_D4s_v3"
+vm_admin_username            = "azureadmin"
+vm_os_disk_size              = 128
+os_disk_caching              = "ReadWrite"
+os_disk_storage_account_type = "StandardSSD_LRS"
+image_publisher              = "MicrosoftWindowsServer"
+image_offer                  = "WindowsServer"
+image_sku                    = "2022-Datacenter"
+image_version                = "latest"
 
 # ── Managed Data Disk ─────────────────────────────────────────────────────────
 data_disk_size_gb              = 32
@@ -56,11 +63,10 @@ data_disk_lun                  = 0
 logic_app_sku = "WS1"
 
 # ── Azure Update Manager ──────────────────────────────────────────────────────
-# Copy the full ARM ID from: Azure Portal → Maintenance Configurations → your config → Properties → Resource ID
-# Leave unset (omit) to skip Update Manager policy assignment until the config is created.
+# Uncomment and set once a maintenance configuration exists in Azure Update Manager.
 # maintenance_configuration_resource_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Maintenance/maintenanceConfigurations/..."
 
-# ── Storage Account (Terraform-managed, conditional) ─────────────────────────
+# ── Storage Account (optional application data storage) ──────────────────────
 deploy_storage_account           = true
 storage_workload                 = "hr"
 storage_account_kind             = "StorageV2"
@@ -75,13 +81,6 @@ blob_soft_delete_retention_days      = 7
 container_soft_delete_retention_days = 7
 storage_versioning_enabled           = false
 
-storage_ip_rules = [
-  "170.55.159.52",  # dev workstation (added 2026-05-14)
-]
+storage_ip_rules       = ["170.55.159.52"]
+storage_subnet_ids     = []
 storage_network_bypass = ["AzureServices"]
-
-# ── Workflow notifications ────────────────────────────────────────────────────
-# key_vault_name and notification_email have defaults in variables.tf.
-# Override here if needed:
-# key_vault_name     = "kv-winvm-dev-01"
-# notification_email = "kishore.avula@kaseya.com"
