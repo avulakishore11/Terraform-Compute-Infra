@@ -47,11 +47,6 @@ moved {
 }
 
 moved {
-  from = module.logic_app.azurerm_service_plan.plan
-  to   = module.logic_app.azurerm_service_plan.logicappservice_plan
-}
-
-moved {
   from = module.logic_app.azurerm_logic_app_standard.main
   to   = module.logic_app.azurerm_logic_app_standard.logic_app
 }
