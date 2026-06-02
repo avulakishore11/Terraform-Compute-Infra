@@ -19,6 +19,13 @@ resource "azurerm_storage_account" "logicapp" {
   https_traffic_only_enabled       = true
   min_tls_version                  = "TLS1_2"
 
+  # AzureServices bypass lets the App Service control plane create the
+  # WEBSITE_CONTENTSHARE file share on first deploy, even with public access off.
+  network_rules {
+    default_action = "Deny"
+    bypass         = ["AzureServices"]
+  }
+
   blob_properties {
     delete_retention_policy {
       days = 7
