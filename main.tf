@@ -112,6 +112,7 @@ module "logic_app" {
   subnet_logicapp_id             = module.networking.subnet_logicapp_id
   storage_account_name           = azurerm_storage_account.logicapp.name
   storage_account_access_key     = azurerm_storage_account.logicapp.primary_access_key
+  content_share_name             = azurerm_storage_share.logicapp.name
   uami_id                        = module.identity.uami_id
   uami_client_id                 = module.identity.uami_client_id
   app_insights_connection_string = module.monitoring.app_insights_connection_string

@@ -69,3 +69,8 @@ variable "uami_resource_id" {
   description = "Full ARM resource ID of the UAMI — exposed as UAMI_RESOURCE_ID app setting so workflows can reference it in HTTP action authentication without hardcoding"
   type        = string
 }
+
+variable "content_share_name" {
+  description = "Pre-created Azure Files share name. Setting WEBSITE_CONTENTSHARE prevents the App Service control plane from attempting to create the share itself, which fails with 403 when the storage account has any network restrictions."
+  type        = string
+}

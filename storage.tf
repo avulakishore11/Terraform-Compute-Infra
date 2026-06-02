@@ -10,11 +10,11 @@ resource "azurerm_storage_account" "logicapp" {
   resource_group_name      = module.resource_group.name
   location                 = module.resource_group.location
   account_tier             = "Standard"
-  account_replication_type = "LRS"   # increase to ZRS/GRS for UAT/Prod
+  account_replication_type = "LRS" # increase to ZRS/GRS for UAT/Prod
   account_kind             = "StorageV2"
 
   # Key auth required — Logic App Standard uses the storage account key internally.
-  shared_access_key_enabled     = true
+  shared_access_key_enabled = true
   # Public access must remain open for this dedicated Logic App storage account.
   # The App Service control plane creates WEBSITE_CONTENTSHARE from Microsoft's
   # internal IPs at deploy time. Network restrictions (even with AzureServices bypass
@@ -24,6 +24,11 @@ resource "azurerm_storage_account" "logicapp" {
   public_network_access_enabled = true
   https_traffic_only_enabled    = true
   min_tls_version               = "TLS1_2"
+
+  network_rules {
+    default_action = "Allow"
+    bypass         = ["AzureServices"]
+  }
 
   blob_properties {
     delete_retention_policy {
@@ -35,4 +40,13 @@ resource "azurerm_storage_account" "logicapp" {
   }
 
   tags = local.common_tags
+}
+
+# Pre-create the file share so the App Service control plane finds it already
+# exists during Logic App deployment and skips its own creation attempt.
+# The control plane's creation attempt is what causes the 403.
+resource "azurerm_storage_share" "logicapp" {
+  name               = "logic-app-content"
+  storage_account_id = azurerm_storage_account.logicapp.id
+  quota              = 5120
 }

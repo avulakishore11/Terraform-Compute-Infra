@@ -25,20 +25,19 @@ resource "azurerm_logic_app_standard" "main" {
   }
 
   app_settings = {
-    # Required: tells Azure this is Logic App Standard, not a plain Function App.
-    #"APP_KIND" = "workflowApp"
     # Required: without this, the runtime throws WorkflowAppOAuthTokenFailure
     # when using a User-Assigned Managed Identity exclusively (no SystemAssigned).
     "MANAGED_IDENTITY_CLIENT_ID"           = var.uami_client_id
     "APPLICATIONINSIGHTS_CONNECTION_STRING" = var.app_insights_connection_string
     # VM automation context — reference in workflow HTTP actions with @appsetting('VM_NAME') etc.
-    # The UAMI already has Virtual Machine Contributor on this VM (rbac.tf).
     "AZURE_SUBSCRIPTION_ID" = var.subscription_id
     "VM_RESOURCE_GROUP"     = var.vm_resource_group
     "VM_NAME"               = var.vm_name
-    # Full UAMI resource ID — used in workflow HTTP action authentication blocks.
-    # Avoids hardcoding the UAMI path in workflow JSON across environments.
     "UAMI_RESOURCE_ID"      = var.uami_resource_id
+    # Explicitly set the content share so the App Service control plane does not
+    # attempt to create it. The share is pre-created by azurerm_storage_share in
+    # storage.tf; without this the control plane creation attempt returns 403.
+    "WEBSITE_CONTENTSHARE"  = var.content_share_name
   }
 
   site_config {
