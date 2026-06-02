@@ -29,7 +29,7 @@ variable "storage_account_name" {
 
 variable "storage_account_access_key" {
   type      = string
-  sensitive = true
+  sensitive = false
 }
 
 variable "uami_id" {

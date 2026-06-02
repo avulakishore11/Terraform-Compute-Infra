@@ -58,6 +58,11 @@ variable "subnet_vm_prefix" {
   type        = string
 }
 
+variable "subnet_private_endpoint_prefix" {
+  description = "Private endpoint subnet CIDR prefix"
+  type        = string
+}
+
 variable "nsg_rules" {
   description = "NSG inbound/outbound security rules"
   type = list(object({

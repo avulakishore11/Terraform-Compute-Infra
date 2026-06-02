@@ -39,7 +39,7 @@ variable "account_replication_type" {
 variable "access_tier" {
   description = "Default blob access tier (Hot | Cool)"
   type        = string
-  default     = "Hot"
+  default     = "cool"
 }
 
 variable "min_tls_version" {
@@ -57,7 +57,7 @@ variable "https_traffic_only_enabled" {
 variable "public_network_access_enabled" {
   description = "Allow public internet access to the storage account. Disable for private workloads."
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "allow_nested_items_to_be_public" {
@@ -78,7 +78,7 @@ variable "cross_tenant_replication_enabled" {
 variable "shared_access_key_enabled" {
   description = "Enable storage account key (SAS) authentication. Set to false to enforce Azure AD only."
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "blob_soft_delete_retention_days" {

@@ -16,17 +16,23 @@ module "resource_group" {
 module "networking" {
   source = "./modules/networking"
 
-  resource_group_name    = module.resource_group.name
-  location               = module.resource_group.location
-  vnet_name              = local.vnet_name
-  vnet_address_space     = var.vnet_address_space
-  subnet_logicapp_name   = local.subnet_logicapp_name
-  subnet_logicapp_prefix = var.subnet_logicapp_prefix
-  subnet_vm_name         = local.subnet_vm_name
-  subnet_vm_prefix       = var.subnet_vm_prefix
-  nsg_logicapp_name      = local.nsg_logicapp_name
-  nsg_vm_name            = local.nsg_vm_name
-  tags                   = local.common_tags
+  resource_group_name            = module.resource_group.name
+  location                       = module.resource_group.location
+  environment                    = var.environment
+  vnet_name                      = local.vnet_name
+  vnet_address_space             = var.vnet_address_space
+  subnet_logicapp_name           = local.subnet_logicapp_name
+  subnet_logicapp_prefix         = var.subnet_logicapp_prefix
+  subnet_vm_name                 = local.subnet_vm_name
+  subnet_vm_prefix               = var.subnet_vm_prefix
+  subnet_private_endpoint_prefix = var.subnet_private_endpoint_prefix
+  nsg_logicapp_name              = local.nsg_logicapp_name
+  nsg_vm_name                    = local.nsg_vm_name
+  storage_account_id             = module.storage_account.id
+  storage_account_name           = local.storage_account_name
+  tags                           = local.common_tags
+
+  depends_on = [module.storage_account]
 }
 
 ###############################################################################
@@ -131,7 +137,7 @@ module "logic_app" {
 ###############################################################################
 module "storage_account" {
   source               = "./modules/storage_account"
-  storage_account_name = local.logicapp_storage_name
+  storage_account_name = local.storage_account_name
   location             = module.resource_group.location
   resource_group_name  = module.resource_group.name
 

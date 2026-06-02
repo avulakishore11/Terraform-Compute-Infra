@@ -7,7 +7,7 @@ project     = "winvm"
 sequence    = "01"
 
 tags = {
-  Department  = "CorpIT"
+  Department  = "Infra"
   CreatedBy   = "Kishore Avula"
   Project     = "Infra-automation"
   Environment = "dev"
@@ -17,6 +17,7 @@ tags = {
 vnet_address_space     = ["10.1.0.0/16"]
 subnet_logicapp_prefix = "10.1.1.0/24"
 subnet_vm_prefix       = "10.1.3.0/29"
+subnet_private_endpoint_prefix = "10.1.4.0/24"
 
 nsg_rules = [
   {
@@ -79,3 +80,4 @@ storage_versioning_enabled           = false
 storage_ip_rules       = ["170.55.159.52"]
 storage_subnet_ids     = []
 storage_network_bypass = ["AzureServices"]
+

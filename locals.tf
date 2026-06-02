@@ -38,7 +38,7 @@ locals {
   managed_disk_name     = "disk-${local.vm_name}"
   # Single storage account — used by both Logic App runtime and application data.
   # Storage account names cannot contain dashes (Azure requirement).
-  logicapp_storage_name = lower(replace("stla${local.region}${var.environment}${var.sequence}", "-", ""))
+  storage_account_name = lower(replace("stla${local.region}${var.environment}${var.sequence}", "-", ""))
 
   # ── Common tags applied to every resource ───────────────────────────────────
   common_tags = merge(
@@ -46,7 +46,6 @@ locals {
       Environment = var.environment
       Project     = var.project
       ManagedBy   = "Terraform"
-      Owner       = "Kishore Avula"
       CreatedDate = formatdate("YYYY-MM-DD", timestamp())
     },
     var.tags
