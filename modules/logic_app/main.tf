@@ -26,23 +26,22 @@ resource "azurerm_logic_app_standard" "logic_app" {
 
   app_settings = {
     "MANAGED_IDENTITY_CLIENT_ID" = var.uami_client_id
-    "AZURE_SUBSCRIPTION_ID"     = var.subscription_id
-    "VM_RESOURCE_GROUP"                    = var.vm_resource_group
-    "VM_NAME"                              = var.vm_name
-    "UAMI_RESOURCE_ID"                     = var.uami_resource_id
-    # Routes storage (WEBSITE_CONTENTSHARE) access through VNet so the Logic App
-    # uses the private endpoint instead of the public storage endpoint.
-    # Required when public_network_access_enabled = false on the storage account.
-    "WEBSITE_CONTENTOVERVNET"              = "1"
+    "AZURE_SUBSCRIPTION_ID"      = var.subscription_id
+    "VM_RESOURCE_GROUP"          = var.vm_resource_group
+    "VM_NAME"                    = var.vm_name
+    "UAMI_RESOURCE_ID"           = var.uami_resource_id
+    # Pre-created file share — prevents Azure from attempting to create it from
+    # Microsoft-internal IPs, which fails against network-restricted storage.
+    "WEBSITE_CONTENTSHARE"       = var.content_share_name
+    # Routes file share access through the VNet private endpoint.
+    "WEBSITE_CONTENTOVERVNET"    = "1"
   }
 
   site_config {
     vnet_route_all_enabled = true
     min_tls_version        = "1.2"
 
-
-## IP 170.55.159.52/32 — allowed at priority 100 (dev machine IP address — adjust or remove in production)
-
+    # Allow specific IPs (e.g. dev workstation) to call Logic App triggers
     dynamic "ip_restriction" {
       for_each = { for i, ip in var.inbound_ip_addresses : i => ip }
       content {
@@ -53,8 +52,7 @@ resource "azurerm_logic_app_standard" "logic_app" {
       }
     }
 
-##  VM subnet — allowed at priority 200 (so VMs in the environment can call workflows)
-
+    # Allow VNet subnets (e.g. VM subnet) to call Logic App triggers
     dynamic "ip_restriction" {
       for_each = { for i, id in var.inbound_subnet_ids : i => id }
       content {
@@ -66,13 +64,10 @@ resource "azurerm_logic_app_standard" "logic_app" {
     }
   }
 
-##  Everything else — denied (Azure's default when any allow rule exists)
-
-
-
-  # Azure automatically manages AzureWebJobsStorage, WEBSITE_CONTENTSHARE, etc.
-  # ignore_changes prevents Terraform from removing them on subsequent plans.
-  
+  # Azure automatically injects AzureWebJobsStorage, FUNCTIONS_EXTENSION_VERSION, etc.
+  # after first deploy. ignore_changes ensures subsequent plans do not remove those
+  # platform-managed settings. WEBSITE_CONTENTSHARE is set explicitly above on creation
+  # and will not be changed by Azure after that.
   lifecycle {
     ignore_changes = [app_settings]
   }
