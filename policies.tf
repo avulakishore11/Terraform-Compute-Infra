@@ -13,7 +13,7 @@
 data "azurerm_subscription" "current" {}
 
 locals {
-  required_tags = toset(["CreatedBy", "Owner", "Department", "Environment"])
+  required_tags = toset(["CreatedBy", "Department", "Environment", "Project"])
 
   # Built-in policy definition IDs (immutable Azure platform GUIDs)
   policy_require_tag_on_resources       = "/providers/Microsoft.Authorization/policyDefinitions/871b6d14-10aa-478d-b590-94f262ecfa99"
@@ -144,7 +144,7 @@ resource "azurerm_subscription_policy_assignment" "check_missing_updates_windows
 
   parameters = jsonencode({
     locations = {
-      value = ["eastus", "eastus2", "southcentralus", "westus2", "westus3", "centralus"]
+      value = ["eastus", "eastus2"]
     }
     osType = {
       value = "Windows"
