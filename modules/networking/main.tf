@@ -32,7 +32,7 @@ resource "azurerm_subnet" "virtual_machine_subnet" {
   address_prefixes     = [var.subnet_vm_prefix]
 }
 
-# Private Endpoint Subnet — no delegation, no service endpoints
+# Private Endpoint Subnet 
 resource "azurerm_subnet" "private_endpoint_subnet" {
   name                 = "sn-private-endpoint-${var.environment}"
   resource_group_name  = var.resource_group_name
