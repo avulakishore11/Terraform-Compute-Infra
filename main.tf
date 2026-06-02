@@ -28,11 +28,46 @@ module "networking" {
   subnet_private_endpoint_prefix = var.subnet_private_endpoint_prefix
   nsg_logicapp_name              = local.nsg_logicapp_name
   nsg_vm_name                    = local.nsg_vm_name
-  storage_account_id             = module.storage_account.id
-  storage_account_name           = local.storage_account_name
   tags                           = local.common_tags
+}
 
-  depends_on = [module.storage_account]
+###############################################################################
+# Storage Private Endpoint — lives at root to avoid a cycle between
+# module.networking (needs storage ID) and module.storage_account (needs
+# subnet ID from networking). Root level depends on both with no cycle.
+###############################################################################
+resource "azurerm_private_dns_zone" "storage_file" {
+  name                = "privatelink.file.core.windows.net"
+  resource_group_name = module.resource_group.name
+  tags                = local.common_tags
+}
+
+resource "azurerm_private_dns_zone_virtual_network_link" "storage_file" {
+  name                  = "link-${local.vnet_name}"
+  resource_group_name   = module.resource_group.name
+  private_dns_zone_name = azurerm_private_dns_zone.storage_file.name
+  virtual_network_id    = module.networking.vnet_id
+  tags                  = local.common_tags
+}
+
+resource "azurerm_private_endpoint" "storage_account" {
+  name                = "pe-${local.storage_account_name}"
+  resource_group_name = module.resource_group.name
+  location            = module.resource_group.location
+  subnet_id           = module.networking.subnet_private_endpoint_id
+  tags                = local.common_tags
+
+  private_service_connection {
+    name                           = "psc-${local.storage_account_name}"
+    is_manual_connection           = false
+    private_connection_resource_id = module.storage_account.id
+    subresource_names              = ["file"]
+  }
+
+  private_dns_zone_group {
+    name                 = "pdzg-${local.storage_account_name}"
+    private_dns_zone_ids = [azurerm_private_dns_zone.storage_file.id]
+  }
 }
 
 ###############################################################################

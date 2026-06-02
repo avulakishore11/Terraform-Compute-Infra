@@ -70,6 +70,23 @@ moved {
   to   = module.resource_group.azurerm_resource_group.resource_group
 }
 
+# ── Private endpoint moved from networking module to root ─────────────────────
+
+moved {
+  from = module.networking.azurerm_private_dns_zone.storage_file_dns_zone
+  to   = azurerm_private_dns_zone.storage_file
+}
+
+moved {
+  from = module.networking.azurerm_private_dns_zone_virtual_network_link.storage_file_dns_link
+  to   = azurerm_private_dns_zone_virtual_network_link.storage_file
+}
+
+moved {
+  from = module.networking.azurerm_private_endpoint.storage_account_private_endpoint
+  to   = azurerm_private_endpoint.storage_account
+}
+
 # ── Storage account consolidation ─────────────────────────────────────────────
 
 moved {

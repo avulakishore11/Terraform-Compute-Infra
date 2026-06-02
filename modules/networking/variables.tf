@@ -47,16 +47,6 @@ variable "nsg_vm_name" {
   type = string
 }
 
-variable "storage_account_id" {
-  description = "Resource ID of the storage account to attach the private endpoint to"
-  type        = string
-}
-
-variable "storage_account_name" {
-  description = "Name of the storage account — used to name the private endpoint resources"
-  type        = string
-}
-
 variable "tags" {
   type = map(string)
 }
