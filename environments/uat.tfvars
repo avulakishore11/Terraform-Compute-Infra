@@ -63,4 +63,4 @@ storage_versioning_enabled           = false
 storage_ip_rules       = []
 storage_network_bypass = ["AzureServices"]
 
-maintenance_configuration_resource_id = "/subscriptions/7a6d2623-b7d9-467b-ab2f-d71d7bf6d45d.../resourceGroups/.../providers/Microsoft.Maintenance/maintenanceConfigurations/..."
+# maintenance_configuration_resource_id = "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.Maintenance/maintenanceConfigurations/<name>"

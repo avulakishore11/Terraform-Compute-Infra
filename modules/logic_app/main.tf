@@ -26,7 +26,7 @@ resource "azurerm_logic_app_standard" "main" {
 
   app_settings = {
     # Required: tells Azure this is Logic App Standard, not a plain Function App.
-    "APP_KIND" = "workflowApp"
+    #"APP_KIND" = "workflowApp"
     # Required: without this, the runtime throws WorkflowAppOAuthTokenFailure
     # when using a User-Assigned Managed Identity exclusively (no SystemAssigned).
     "MANAGED_IDENTITY_CLIENT_ID"           = var.uami_client_id

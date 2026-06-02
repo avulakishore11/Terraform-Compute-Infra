@@ -85,6 +85,8 @@ resource "azurerm_role_assignment" "policy_remediation_contributor" {
 }
 
 resource "azurerm_subscription_policy_assignment" "schedule_windows_updates_ring1" {
+  count                = var.maintenance_configuration_resource_id != null ? 1 : 0
+
   name                 = "ka-sched-win-upd-eus-r1"
   display_name         = "KA-Schedule Windows updates EastUS - RING 1"
   description          = "Schedule Windows Server recurring updates for EastUS infrastructure."
