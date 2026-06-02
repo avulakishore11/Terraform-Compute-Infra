@@ -79,9 +79,9 @@ resource "azurerm_subscription_policy_assignment" "require_tag_resource_groups" 
 #     --role "User Access Administrator" \
 #     --scope /subscriptions/<subscription-id>
 resource "azurerm_role_assignment" "policy_remediation_contributor" {
-  scope                = data.azurerm_subscription.current.id
+  scope                = module.resource_group.id
   role_definition_name = "Contributor"
-  principal_id         = module.policy_remediation_identity.principal_id 
+  principal_id         = module.policy_remediation_identity.principal_id
 }
 
 resource "azurerm_subscription_policy_assignment" "schedule_windows_updates_ring1" {

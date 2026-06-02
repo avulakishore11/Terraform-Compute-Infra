@@ -171,9 +171,8 @@ variable "logic_app_sku" {
 }
 
 variable "logic_app_inbound_ip_addresses" {
-  description = "IP addresses/CIDRs allowed to call Logic App triggers (e.g. [\"170.55.159.52/32\"]). When set, all other IPs are denied."
+  description = "IP addresses/CIDRs allowed to call Logic App triggers (e.g. [\"170.55.159.52/32\"]). When set, all other IPs are denied. Set [] only if open access is intentional."
   type        = list(string)
-  default     = []
 }
 
 # ── Storage Account ───────────────────────────────────────────────────────────

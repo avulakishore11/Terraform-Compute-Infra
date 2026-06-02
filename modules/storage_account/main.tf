@@ -13,14 +13,13 @@ resource "azurerm_storage_account" "storage_account" {
   cross_tenant_replication_enabled = var.cross_tenant_replication_enabled
   shared_access_key_enabled        = var.shared_access_key_enabled
 
-  # default_action = Deny is applied automatically once any IP or subnet is listed.
-  # Removing all entries reverts to Allow (open to all public traffic).
-  
+  # Always Deny by default regardless of whether ip_rules/subnet_ids are populated.
+  # Without this guard, passing empty lists would silently open the storage account to all traffic.
   network_rules {
-    default_action             = length(var.network_rules_ip_rules) > 0 || length(var.network_rules_subnet_ids) > 0 ? "Deny" : "Allow"
+    default_action             = "Deny"
     ip_rules                   = var.network_rules_ip_rules
     virtual_network_subnet_ids = var.network_rules_subnet_ids
-  
+    bypass                     = ["AzureServices"]
   }
 
   blob_properties {

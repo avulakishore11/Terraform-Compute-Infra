@@ -92,9 +92,14 @@ variable "image_version" {
   default     = "latest"
 }
 
+variable "uami_id" {
+  description = "Resource ID of the User Assigned Managed Identity to attach to the VM"
+  type        = string
+}
+
 variable "tags" {
   description = "Tags applied to every resource. Must include: CreatedBy, Owner, Department, Environment."
-  type        = map(string) # map of string key-value pairs for tags
+  type        = map(string)
   default     = {}
 }
 # fmt fix: file previously had no trailing newline; terraform fmt requires every .tf file

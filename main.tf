@@ -135,6 +135,7 @@ module "virtual_machine" {
   image_offer                  = var.image_offer
   image_sku                    = var.image_sku
   image_version                = var.image_version
+  uami_id                      = module.identity.uami_id
   tags                         = local.common_tags
 }
 

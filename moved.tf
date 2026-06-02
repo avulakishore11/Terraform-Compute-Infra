@@ -86,6 +86,13 @@ moved {
   to   = azurerm_private_endpoint.storage_account
 }
 
+# ── VM resource rename ────────────────────────────────────────────────────────
+
+moved {
+  from = module.virtual_machine.azurerm_windows_virtual_machine.this
+  to   = module.virtual_machine.azurerm_windows_virtual_machine.virtual_machine
+}
+
 # ── Storage account consolidation ─────────────────────────────────────────────
 
 moved {

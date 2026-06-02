@@ -11,12 +11,13 @@ terraform {
   }
 }
 
-resource "azurerm_windows_virtual_machine" "this" {
+resource "azurerm_windows_virtual_machine" "virtual_machine" {
   name                  = var.vm_name
   computer_name         = trim(substr(var.vm_name, 0, 15), "-") # Windows: max 15 chars, no trailing hyphen
   resource_group_name   = var.resource_group_name
   location              = var.location
   size                  = var.vm_size
+  encryption_at_host_enabled = true
   admin_username        = var.admin_username
   admin_password        = var.admin_password
   network_interface_ids = [var.nic_id]
@@ -32,6 +33,11 @@ resource "azurerm_windows_virtual_machine" "this" {
     offer     = var.image_offer
     sku       = var.image_sku
     version   = var.image_version
+  }
+
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [var.uami_id]
   }
 
   boot_diagnostics {}

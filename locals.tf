@@ -46,7 +46,6 @@ locals {
       Environment = var.environment
       Project     = var.project
       ManagedBy   = "Terraform"
-      CreatedDate = formatdate("YYYY-MM-DD", timestamp())
     },
     var.tags
   )
