@@ -1,4 +1,4 @@
-resource "azurerm_service_plan" "plan" {
+resource "azurerm_service_plan" "logicapp_plan" {
   name                = var.app_service_plan_name
   resource_group_name = var.resource_group_name
   location            = var.location
