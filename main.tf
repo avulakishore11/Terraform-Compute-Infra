@@ -127,6 +127,11 @@ module "logic_app" {
   subscription_id   = var.subscription_id
   uami_resource_id  = module.identity.uami_id
   tags              = local.common_tags
+
+  # Wait for the full networking stack — private endpoint + DNS zone + VNet link —
+  # to be ready before creating the Logic App. Without this, the App Service
+  # control plane starts before the storage account is resolvable via private DNS.
+  depends_on = [module.networking, azurerm_storage_share.logicapp]
 }
 
 ###############################################################################
