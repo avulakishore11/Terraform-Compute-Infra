@@ -170,6 +170,12 @@ variable "logic_app_sku" {
   type        = string
 }
 
+variable "logic_app_inbound_ip_addresses" {
+  description = "IP addresses/CIDRs allowed to call Logic App triggers (e.g. [\"170.55.159.52/32\"]). When set, all other IPs are denied."
+  type        = list(string)
+  default     = []
+}
+
 # ── Storage Account ───────────────────────────────────────────────────────────
 # Single account — used by Logic App runtime and application data.
 # public_network_access_enabled and shared_access_key_enabled are hardcoded
@@ -220,10 +226,6 @@ variable "storage_subnet_ids" {
   type        = list(string)
 }
 
-variable "storage_network_bypass" {
-  description = "Azure services that bypass the storage firewall (AzureServices | Logging | Metrics | None)"
-  type        = list(string)
-}
 
 # ── External Storage (optional — leave null to use Terraform-managed storage) ─
 
@@ -244,4 +246,60 @@ variable "storage_account_id" {
   description = "Resource ID of the existing Storage Account (for RBAC)"
   type        = string
   default     = null
+}
+
+# ── Resource Lock ─────────────────────────────────────────────────────────────
+
+variable "enable_resource_lock" {
+  description = "Apply a CanNotDelete lock on the resource group. Recommended true for prod."
+  type        = bool
+}
+
+# ── Recovery Services Vault ───────────────────────────────────────────────────
+
+variable "recovery_vault_redundancy" {
+  description = "Storage redundancy for the Recovery Services Vault (GeoRedundant | LocallyRedundant)"
+  type        = string
+}
+
+# ── Backup Policy ─────────────────────────────────────────────────────────────
+
+variable "backup_policy_name" {
+  description = "Name of the VM backup policy (e.g. ka-standard-policy, ka-weekly-policy)"
+  type        = string
+}
+
+variable "backup_policy_type" {
+  description = "V1 = standard, V2 = Enhanced (required for instant restore)"
+  type        = string
+}
+
+variable "backup_frequency" {
+  description = "Backup schedule frequency: Daily or Weekly"
+  type        = string
+}
+
+variable "backup_time" {
+  description = "Backup time in UTC — HH:MM (e.g. 07:30)"
+  type        = string
+}
+
+variable "backup_weekdays" {
+  description = "Days to run weekly backup (e.g. [\"Sunday\"]). Ignored for Daily frequency."
+  type        = list(string)
+}
+
+variable "backup_retention_days" {
+  description = "Daily retention count — number of daily backups to keep. Used when backup_frequency = Daily."
+  type        = number
+}
+
+variable "backup_retention_weeks" {
+  description = "Weekly retention count — number of weekly backups to keep. Used when backup_frequency = Weekly."
+  type        = number
+}
+
+variable "backup_instant_restore_days" {
+  description = "Instant restore snapshot retention in days (V2 Enhanced policy only, minimum 1)"
+  type        = number
 }

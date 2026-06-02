@@ -61,7 +61,22 @@ data_disk_storage_account_type = "Premium_LRS"
 data_disk_lun                  = 0
 
 # ── Logic App ─────────────────────────────────────────────────────────────────
-logic_app_sku = "WS1"
+logic_app_sku                  = "WS1"
+logic_app_inbound_ip_addresses = []
+
+# ── Resource Lock ─────────────────────────────────────────────────────────────
+enable_resource_lock = false
+
+# ── Recovery Services Vault + Backup ─────────────────────────────────────────
+recovery_vault_redundancy   = "LocallyRedundant"
+backup_policy_name          = "ka-weekly-policy"
+backup_policy_type          = "V1"
+backup_frequency            = "Weekly"
+backup_time                 = "07:30"
+backup_weekdays             = ["Sunday"]
+backup_retention_days       = 30
+backup_retention_weeks      = 5
+backup_instant_restore_days = 2
 
 # ── Azure Update Manager ──────────────────────────────────────────────────────
 # Uncomment and set once a maintenance configuration exists in Azure Update Manager.
@@ -77,6 +92,5 @@ blob_soft_delete_retention_days      = 7
 container_soft_delete_retention_days = 7
 storage_versioning_enabled           = false
 
-storage_ip_rules       = []
-storage_subnet_ids     = []
-storage_network_bypass = ["AzureServices"]
+storage_ip_rules   = []
+storage_subnet_ids = []

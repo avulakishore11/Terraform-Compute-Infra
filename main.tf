@@ -83,7 +83,7 @@ module "policy_remediation_identity" {
   tags                = local.common_tags
 }
 
-# Logic App UAMI — grants Logic App access to VM and storage (rbac.tf)
+# Environment UAMI — single managed identity for the environment; grants access to VM and storage
 module "identity" {
   source = "./modules/identity"
 
@@ -101,9 +101,8 @@ module "monitoring" {
 
   resource_group_name = module.resource_group.name
   location            = module.resource_group.location
-  log_analytics_name  = local.log_analytics_name
-  app_insights_name   = local.app_insights_name
-  tags                = local.common_tags
+  log_analytics_name = local.log_analytics_name
+  tags               = local.common_tags
 }
 
 ###############################################################################
@@ -153,20 +152,21 @@ module "logic_app" {
   subnet_logicapp_id             = module.networking.subnet_logicapp_id
   storage_account_name           = module.storage_account.name
   storage_account_access_key     = module.storage_account.primary_access_key
-  content_share_name             = azurerm_storage_share.logicapp.name
-  uami_id                        = module.identity.uami_id
-  uami_client_id                 = module.identity.uami_client_id
-  app_insights_connection_string = module.monitoring.app_insights_connection_string
-  vm_name           = local.vm_name
+  content_share_name = azurerm_storage_share.logicapp.name
+  uami_id            = module.identity.uami_id
+  uami_client_id     = module.identity.uami_client_id
+  vm_name            = local.vm_name
   vm_resource_group = module.resource_group.name
   subscription_id   = var.subscription_id
   uami_resource_id  = module.identity.uami_id
   tags              = local.common_tags
 
-  # Wait for the full networking stack — private endpoint + DNS zone + VNet link —
-  # to be ready before creating the Logic App. Without this, the App Service
-  # control plane starts before the storage account is resolvable via private DNS.
-  depends_on = [module.networking, azurerm_storage_share.logicapp]
+  inbound_ip_addresses = var.logic_app_inbound_ip_addresses
+  inbound_subnet_ids   = [module.networking.subnet_vm_id]
+
+  # Wait for private endpoint + DNS zone to be ready before creating the Logic App.
+  depends_on = [module.networking, azurerm_storage_share.logicapp,
+                azurerm_private_dns_zone_virtual_network_link.storage_file]
 }
 
 ###############################################################################
@@ -194,10 +194,7 @@ module "storage_account" {
   versioning_enabled                   = var.storage_versioning_enabled
 
   network_rules_ip_rules   = var.storage_ip_rules
-  # Always include the Logic App subnet so VNet-integrated access works
-  # regardless of whether public_network_access_enabled is true or false.
   network_rules_subnet_ids = concat(var.storage_subnet_ids, [module.networking.subnet_logicapp_id])
-  network_rules_bypass     = var.storage_network_bypass
 
   tags = local.common_tags
 }
@@ -208,6 +205,167 @@ resource "azurerm_storage_share" "logicapp" {
   name               = "logic-app-content"
   storage_account_id = module.storage_account.id
   quota              = 5120
+  access_tier        = "Cool"
+}
+
+###############################################################################
+# Monitoring — Diagnostic Settings and Azure Monitor Agent
+###############################################################################
+
+# Logic App → Log Analytics + storage archival
+resource "azurerm_monitor_diagnostic_setting" "logic_app" {
+  name                       = "diag-${local.logic_app_name}"
+  target_resource_id         = module.logic_app.logic_app_id
+  log_analytics_workspace_id = module.monitoring.workspace_id
+  storage_account_id         = module.storage_account.id
+
+  enabled_log { category = "AppServiceHTTPLogs" }
+  enabled_log { category = "AppServiceConsoleLogs" }
+  enabled_log { category = "AppServiceAppLogs" }
+  enabled_log { category = "AppServicePlatformLogs" }
+
+  metric {
+    category = "AllMetrics"
+    enabled  = true
+  }
+}
+
+# VM → Azure Monitor Agent extension (enables Log Analytics telemetry from the VM)
+resource "azurerm_virtual_machine_extension" "azure_monitor_agent" {
+  name                       = "AzureMonitorWindowsAgent"
+  virtual_machine_id         = module.virtual_machine.id
+  publisher                  = "Microsoft.Azure.Monitor"
+  type                       = "AzureMonitorWindowsAgent"
+  type_handler_version       = "1.0"
+  automatic_upgrade_enabled  = true
+  tags                       = local.common_tags
+}
+
+# Link Log Analytics workspace to the storage account for custom log archival
+resource "azurerm_log_analytics_linked_storage_account" "logs" {
+  data_source_type      = "CustomLogs"
+  resource_group_name   = module.resource_group.name
+  workspace_resource_id = module.monitoring.workspace_id
+  storage_account_ids   = [module.storage_account.id]
+}
+
+###############################################################################
+# Resource Lock — prevents accidental deletion of the resource group
+###############################################################################
+resource "azurerm_management_lock" "resource_group" {
+  count      = var.enable_resource_lock ? 1 : 0
+  name       = "lock-${local.resource_group_name}"
+  scope      = module.resource_group.id
+  lock_level = "CanNotDelete"
+  notes      = "Locked to prevent accidental deletion. Remove this lock before running terraform destroy."
+}
+
+###############################################################################
+# VM Log Analytics — Data Collection Rule + Association
+# The Azure Monitor Agent extension (installed in the monitoring section) needs
+# a DCR to define what to collect and where to send it.
+###############################################################################
+resource "azurerm_monitor_data_collection_rule" "vm" {
+  name                = "dcr-${local.vm_name}"
+  resource_group_name = module.resource_group.name
+  location            = module.resource_group.location
+  tags                = local.common_tags
+
+  destinations {
+    log_analytics {
+      workspace_resource_id = module.monitoring.workspace_id
+      name                  = "law-destination"
+    }
+  }
+
+  data_flow {
+    streams      = ["Microsoft-Event", "Microsoft-Perf"]
+    destinations = ["law-destination"]
+  }
+
+  data_sources {
+    performance_counter {
+      streams                       = ["Microsoft-Perf"]
+      sampling_frequency_in_seconds = 60
+      counter_specifiers = [
+        "\\Processor(_Total)\\% Processor Time",
+        "\\Memory\\Available Bytes",
+        "\\LogicalDisk(_Total)\\% Free Space",
+        "\\LogicalDisk(_Total)\\Disk Read Bytes/sec",
+        "\\LogicalDisk(_Total)\\Disk Write Bytes/sec",
+      ]
+      name = "perf-counters"
+    }
+
+    windows_event_log {
+      streams = ["Microsoft-Event"]
+      x_path_queries = [
+        "Application!*[System[(Level=1 or Level=2 or Level=3)]]",
+        "System!*[System[(Level=1 or Level=2)]]",
+      ]
+      name = "windows-event-logs"
+    }
+  }
+}
+
+resource "azurerm_monitor_data_collection_rule_association" "vm" {
+  name                    = "dcra-${local.vm_name}"
+  target_resource_id      = module.virtual_machine.id
+  data_collection_rule_id = azurerm_monitor_data_collection_rule.vm.id
+}
+
+###############################################################################
+# Recovery Services Vault + Backup Policy + Protected VM
+###############################################################################
+resource "azurerm_recovery_services_vault" "main" {
+  name                = local.recovery_vault_name
+  resource_group_name = module.resource_group.name
+  location            = module.resource_group.location
+  sku                 = "Standard"
+  storage_mode_type   = var.recovery_vault_redundancy
+  soft_delete_enabled = true
+  tags                = local.common_tags
+}
+
+resource "azurerm_backup_policy_vm" "main" {
+  name                = var.backup_policy_name
+  resource_group_name = module.resource_group.name
+  recovery_vault_name = azurerm_recovery_services_vault.main.name
+  policy_type         = var.backup_policy_type
+  timezone            = "UTC"
+
+  backup {
+    frequency = var.backup_frequency
+    time      = var.backup_time
+    weekdays  = var.backup_frequency == "Weekly" ? var.backup_weekdays : null
+  }
+
+  # Only applicable for V2 (Enhanced) policy
+  instant_restore_retention_days = var.backup_policy_type == "V2" ? var.backup_instant_restore_days : null
+
+  # Daily retention — used when backup_frequency = Daily (prod)
+  dynamic "retention_daily" {
+    for_each = var.backup_frequency == "Daily" ? [1] : []
+    content {
+      count = var.backup_retention_days
+    }
+  }
+
+  # Weekly retention — used when backup_frequency = Weekly (dev/uat)
+  dynamic "retention_weekly" {
+    for_each = var.backup_frequency == "Weekly" ? [1] : []
+    content {
+      count    = var.backup_retention_weeks
+      weekdays = var.backup_weekdays
+    }
+  }
+}
+
+resource "azurerm_backup_protected_vm" "main" {
+  resource_group_name = module.resource_group.name
+  recovery_vault_name = azurerm_recovery_services_vault.main.name
+  source_vm_id        = module.virtual_machine.id
+  backup_policy_id    = azurerm_backup_policy_vm.main.id
 }
 
 ###############################################################################

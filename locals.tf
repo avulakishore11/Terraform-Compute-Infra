@@ -6,7 +6,7 @@
 #   NSGs             : nsg-{purpose}-{env}-{seq}
 #   Logic App        : la{region}-{project}-{env}-{seq}
 #   App Service Plan : asp-{region}-{project}-{env}-{seq}
-#   UAMI             : uami-logicapp-storage-{env}
+#   UAMI             : uami-{project}-{env}-{seq}
 #   VM               : vm{region}-{project}-{env}-{seq}
 #   Storage          : stla{region}{env}{seq}  (no dashes — Azure requirement)
 ###############################################################################
@@ -27,9 +27,9 @@ locals {
   nsg_logicapp_name     = "nsg-logicapp-${var.environment}-${var.sequence}"
   nsg_vm_name           = "nsg-vm-${var.environment}-${var.sequence}"
   policy_identity_name  = "id-policy-remediation-${var.project}-${var.environment}-${var.sequence}"
-  uami_name             = "uami-logicapp-storage-${var.environment}"
+  uami_name             = "uami-${var.project}-${var.environment}-${var.sequence}"
   log_analytics_name    = "law-${var.project}-${var.environment}-${var.sequence}"
-  app_insights_name     = "appi-${var.project}-${var.environment}-${var.sequence}"
+  recovery_vault_name   = "rsv-${local.region}-${var.project}-${var.environment}-${var.sequence}"
   app_service_plan_name = "asp-${local.region}-${var.project}-${var.environment}-${var.sequence}"
   logic_app_name        = "la${local.region}-${var.project}-${var.environment}-${var.sequence}"
   vm_name               = "vm${local.region}-${var.project}-${var.environment}-${var.sequence}"

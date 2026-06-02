@@ -10,10 +10,6 @@ variable "log_analytics_name" {
   type = string
 }
 
-variable "app_insights_name" {
-  type = string
-}
-
 variable "tags" {
   type = map(string)
 }

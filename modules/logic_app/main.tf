@@ -25,9 +25,8 @@ resource "azurerm_logic_app_standard" "logic_app" {
   }
 
   app_settings = {
-    "MANAGED_IDENTITY_CLIENT_ID"           = var.uami_client_id
-    "APPLICATIONINSIGHTS_CONNECTION_STRING" = var.app_insights_connection_string
-    "AZURE_SUBSCRIPTION_ID"                = var.subscription_id
+    "MANAGED_IDENTITY_CLIENT_ID" = var.uami_client_id
+    "AZURE_SUBSCRIPTION_ID"     = var.subscription_id
     "VM_RESOURCE_GROUP"                    = var.vm_resource_group
     "VM_NAME"                              = var.vm_name
     "UAMI_RESOURCE_ID"                     = var.uami_resource_id
@@ -40,10 +39,40 @@ resource "azurerm_logic_app_standard" "logic_app" {
   site_config {
     vnet_route_all_enabled = true
     min_tls_version        = "1.2"
+
+
+## IP 170.55.159.52/32 — allowed at priority 100 (dev machine IP address — adjust or remove in production)
+
+    dynamic "ip_restriction" {
+      for_each = { for i, ip in var.inbound_ip_addresses : i => ip }
+      content {
+        name       = "allow-ip-${ip_restriction.key}"
+        ip_address = ip_restriction.value
+        priority   = 100 + ip_restriction.key
+        action     = "Allow"
+      }
+    }
+
+##  VM subnet — allowed at priority 200 (so VMs in the environment can call workflows)
+
+    dynamic "ip_restriction" {
+      for_each = { for i, id in var.inbound_subnet_ids : i => id }
+      content {
+        name                      = "allow-subnet-${ip_restriction.key}"
+        virtual_network_subnet_id = ip_restriction.value
+        priority                  = 200 + ip_restriction.key
+        action                    = "Allow"
+      }
+    }
   }
+
+##  Everything else — denied (Azure's default when any allow rule exists)
+
+
 
   # Azure automatically manages AzureWebJobsStorage, WEBSITE_CONTENTSHARE, etc.
   # ignore_changes prevents Terraform from removing them on subsequent plans.
+  
   lifecycle {
     ignore_changes = [app_settings]
   }

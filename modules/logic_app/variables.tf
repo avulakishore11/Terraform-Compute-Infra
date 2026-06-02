@@ -40,10 +40,6 @@ variable "uami_client_id" {
   type = string
 }
 
-variable "app_insights_connection_string" {
-  type = string
-}
-
 variable "tags" {
   type = map(string)
 }
@@ -73,4 +69,16 @@ variable "uami_resource_id" {
 variable "content_share_name" {
   description = "Pre-created Azure Files share name. Setting WEBSITE_CONTENTSHARE prevents the App Service control plane from attempting to create the share itself, which fails with 403 when the storage account has any network restrictions."
   type        = string
+}
+
+variable "inbound_ip_addresses" {
+  description = "IP addresses/CIDRs allowed to call Logic App triggers (e.g. [\"170.55.159.52/32\"])"
+  type        = list(string)
+  default     = []
+}
+
+variable "inbound_subnet_ids" {
+  description = "VNet subnet IDs allowed to call Logic App triggers"
+  type        = list(string)
+  default     = []
 }

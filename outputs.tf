@@ -60,17 +60,17 @@ output "subnet_vm_id" {
 # NEW from terraform-automation — Logic App User Assigned Managed Identity
 
 output "uami_name" {
-  description = "Name of the Logic App User Assigned Managed Identity"
+  description = "Name of the environment User Assigned Managed Identity"
   value       = module.identity.uami_name
 }
 
 output "uami_client_id" {
-  description = "Client ID — set as MANAGED_IDENTITY_CLIENT_ID on Logic App app settings"
+  description = "Client ID of the environment UAMI — used as MANAGED_IDENTITY_CLIENT_ID in Logic App app settings"
   value       = module.identity.uami_client_id
 }
 
 output "uami_principal_id" {
-  description = "Principal (Object) ID of the Logic App UAMI — used for role assignments"
+  description = "Principal (Object) ID of the environment UAMI — used for all RBAC assignments"
   value       = module.identity.uami_principal_id
 }
 
@@ -127,17 +127,6 @@ output "logic_app_default_hostname" {
 
 # ── Monitoring ────────────────────────────────────────────────────────────────
 # NEW from terraform-automation
-
-output "app_insights_name" {
-  description = "Name of the Application Insights instance"
-  value       = module.monitoring.app_insights_name
-}
-
-output "app_insights_instrumentation_key" {
-  description = "Application Insights instrumentation key"
-  value       = module.monitoring.app_insights_instrumentation_key
-  sensitive   = true
-}
 
 output "log_analytics_workspace_id" {
   description = "Resource ID of the Log Analytics Workspace"

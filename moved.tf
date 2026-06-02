@@ -1,3 +1,7 @@
+# NOTE: azurerm_application_insights.main (module.monitoring) was removed.
+# Terraform will plan to destroy it on next apply — this is intentional.
+# No moved block needed for deletions.
+
 # Resource renames declared here so Terraform updates state automatically
 # during plan/apply — no manual "terraform state mv" commands needed.
 # These blocks can be removed after the first successful apply.
