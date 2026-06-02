@@ -66,16 +66,11 @@ logic_app_sku = "WS1"
 # Uncomment and set once a maintenance configuration exists in Azure Update Manager.
 # maintenance_configuration_resource_id = "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.Maintenance/maintenanceConfigurations/<name>"
 
-# ── Storage Account (optional application data storage) ──────────────────────
-deploy_storage_account           = false
-storage_workload                 = "hr"
+# ── Storage Account ──────────────────────────────────────────────────────────
 storage_account_kind             = "StorageV2"
 storage_account_tier             = "Standard"
 storage_account_replication_type = "ZRS"
 storage_access_tier              = "Hot"
-
-storage_public_network_access_enabled = false
-storage_shared_access_key_enabled     = true
 
 blob_soft_delete_retention_days      = 7
 container_soft_delete_retention_days = 7

@@ -165,17 +165,10 @@ variable "logic_app_sku" {
   type        = string
 }
 
-# ── Storage Account (optional application data storage) ───────────────────────
-
-variable "deploy_storage_account" {
-  description = "Set true to deploy the optional application data storage account"
-  type        = bool
-}
-
-variable "storage_workload" {
-  description = "Workload identifier used in the managed storage account name (e.g. hr, ops)"
-  type        = string
-}
+# ── Storage Account ───────────────────────────────────────────────────────────
+# Single account — used by Logic App runtime and application data.
+# public_network_access_enabled and shared_access_key_enabled are hardcoded
+# as true in main.tf (required by Logic App Standard — not user-configurable).
 
 variable "storage_account_kind" {
   description = "Storage account kind (StorageV2 recommended)"
@@ -195,16 +188,6 @@ variable "storage_account_replication_type" {
 variable "storage_access_tier" {
   description = "Default blob access tier (Hot | Cool)"
   type        = string
-}
-
-variable "storage_public_network_access_enabled" {
-  description = "Allow public internet access to the managed storage account"
-  type        = bool
-}
-
-variable "storage_shared_access_key_enabled" {
-  description = "Enable storage account key auth. Set false to enforce Azure AD only."
-  type        = bool
 }
 
 variable "blob_soft_delete_retention_days" {

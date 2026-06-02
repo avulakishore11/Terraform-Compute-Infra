@@ -8,7 +8,7 @@
 #   App Service Plan : asp-{region}-{project}-{env}-{seq}
 #   UAMI             : uami-logicapp-storage-{env}
 #   VM               : vm{region}-{project}-{env}-{seq}
-#   Storage (managed): st{region}{workload}{env}{seq}  (no dashes — Azure requirement)
+#   Storage          : stla{region}{env}{seq}  (no dashes — Azure requirement)
 ###############################################################################
 
 locals {
@@ -36,9 +36,8 @@ locals {
   vm_nic_name           = "nic-${local.vm_name}"
   vm_disk_name          = "osdisk-${local.vm_name}"
   managed_disk_name     = "disk-${local.vm_name}"
-  # Storage account names cannot contain dashes — lower() enforced by Azure API.
-  managed_storage_name  = lower(replace("st${local.region}${var.storage_workload}${var.environment}${var.sequence}", "-", ""))
-  # Dedicated storage account for Logic App Standard runtime (workflow state, triggers, artifacts).
+  # Single storage account — used by both Logic App runtime and application data.
+  # Storage account names cannot contain dashes (Azure requirement).
   logicapp_storage_name = lower(replace("stla${local.region}${var.environment}${var.sequence}", "-", ""))
 
   # ── Common tags applied to every resource ───────────────────────────────────

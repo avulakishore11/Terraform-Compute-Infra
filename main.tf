@@ -110,8 +110,8 @@ module "logic_app" {
   logic_app_name                 = local.logic_app_name
   logic_app_sku                  = var.logic_app_sku
   subnet_logicapp_id             = module.networking.subnet_logicapp_id
-  storage_account_name           = azurerm_storage_account.logicapp.name
-  storage_account_access_key     = azurerm_storage_account.logicapp.primary_access_key
+  storage_account_name           = module.storage_account.name
+  storage_account_access_key     = module.storage_account.primary_access_key
   content_share_name             = azurerm_storage_share.logicapp.name
   uami_id                        = module.identity.uami_id
   uami_client_id                 = module.identity.uami_client_id
@@ -124,23 +124,25 @@ module "logic_app" {
 }
 
 ###############################################################################
-# Storage Account (conditionally deployed — Terraform-managed)
-# Set deploy_storage_account = true to create; leave false when using an
-# externally managed storage account (var.storage_account_name / access_key).
+# Storage Account — single account used by Logic App runtime and app data.
+# Always deployed. Key auth and public access are hardcoded because Logic App
+# Standard requires both: the App Service control plane creates the file share
+# from Microsoft-internal IPs and authenticates with the storage account key.
 ###############################################################################
 module "storage_account" {
-  count                = var.deploy_storage_account ? 1 : 0
   source               = "./modules/storage_account"
-  storage_account_name = local.managed_storage_name
+  storage_account_name = local.logicapp_storage_name
   location             = module.resource_group.location
   resource_group_name  = module.resource_group.name
 
-  account_kind                     = var.storage_account_kind
-  account_tier                     = var.storage_account_tier
-  account_replication_type         = var.storage_account_replication_type
-  access_tier                      = var.storage_access_tier
-  public_network_access_enabled    = var.storage_public_network_access_enabled
-  shared_access_key_enabled        = var.storage_shared_access_key_enabled
+  account_kind             = var.storage_account_kind
+  account_tier             = var.storage_account_tier
+  account_replication_type = var.storage_account_replication_type
+  access_tier              = var.storage_access_tier
+
+  public_network_access_enabled = true  # required: App Service control plane creates file share from Microsoft IPs
+  shared_access_key_enabled     = true  # required: Logic App authenticates via storage account key
+
   blob_soft_delete_retention_days      = var.blob_soft_delete_retention_days
   container_soft_delete_retention_days = var.container_soft_delete_retention_days
   versioning_enabled                   = var.storage_versioning_enabled
@@ -150,6 +152,14 @@ module "storage_account" {
   network_rules_bypass     = var.storage_network_bypass
 
   tags = local.common_tags
+}
+
+# Pre-create the file share so the App Service control plane finds it already
+# exists during Logic App deployment and skips its own creation attempt (which causes 403).
+resource "azurerm_storage_share" "logicapp" {
+  name               = "logic-app-content"
+  storage_account_id = module.storage_account.id
+  quota              = 5120
 }
 
 ###############################################################################

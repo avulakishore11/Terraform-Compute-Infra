@@ -145,18 +145,12 @@ output "log_analytics_workspace_id" {
 }
 
 # ── Storage Account ───────────────────────────────────────────────────────────
-output "storage_id" {
-  description = "Resource ID of the Terraform-managed Storage Account (null when deploy_storage_account = false)"
-  value       = one(module.storage_account[*].id)
+output "storage_account_name" {
+  description = "Name of the storage account (shared by Logic App runtime and app data)"
+  value       = module.storage_account.name
 }
 
-# ── Logic App Storage ─────────────────────────────────────────────────────────
-output "logicapp_storage_name" {
-  description = "Name of the dedicated Logic App storage account"
-  value       = azurerm_storage_account.logicapp.name
-}
-
-output "logicapp_storage_id" {
-  description = "Resource ID of the dedicated Logic App storage account"
-  value       = azurerm_storage_account.logicapp.id
+output "storage_account_id" {
+  description = "Resource ID of the storage account"
+  value       = module.storage_account.id
 }

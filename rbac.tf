@@ -13,7 +13,7 @@ resource "azurerm_role_assignment" "uami_vm_contributor" {
 # Allows Logic App (via UAMI) to read/write its dedicated storage account.
 # Storage account is Terraform-managed (storage.tf) so no conditional needed.
 resource "azurerm_role_assignment" "uami_storage_blob" {
-  scope                = azurerm_storage_account.logicapp.id
+  scope                = module.storage_account.id
   role_definition_name = "Storage Blob Data Contributor"
   principal_id         = module.identity.uami_principal_id
   description          = "Allows UAMI to read and write Logic App workflow state in blob storage"
