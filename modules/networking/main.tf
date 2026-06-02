@@ -13,6 +13,8 @@ resource "azurerm_subnet" "logicapp" {
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = [var.subnet_logicapp_prefix]
 
+  service_endpoints = ["Microsoft.Storage"]
+
   delegation {
     name = "logic-app-delegation"
     service_delegation {

@@ -14,16 +14,18 @@ resource "azurerm_storage_account" "logicapp" {
   account_kind             = "StorageV2"
 
   # Key auth required — Logic App Standard uses the storage account key internally.
-  shared_access_key_enabled        = true
-  public_network_access_enabled    = false
-  https_traffic_only_enabled       = true
-  min_tls_version                  = "TLS1_2"
+  shared_access_key_enabled     = true
+  # public_network_access_enabled must be true so that network_rules (default_action=Deny
+  # + AzureServices bypass + subnet allowlist) are evaluated. Setting it to false bypasses
+  # all network_rules and blocks even trusted Azure services, causing 403 on file share creation.
+  public_network_access_enabled = true
+  https_traffic_only_enabled    = true
+  min_tls_version               = "TLS1_2"
 
-  # AzureServices bypass lets the App Service control plane create the
-  # WEBSITE_CONTENTSHARE file share on first deploy, even with public access off.
   network_rules {
-    default_action = "Deny"
-    bypass         = ["AzureServices"]
+    default_action             = "Deny"
+    bypass                     = ["AzureServices"]
+    virtual_network_subnet_ids = [module.networking.subnet_logicapp_id]
   }
 
   blob_properties {
