@@ -219,15 +219,11 @@ resource "azurerm_monitor_diagnostic_setting" "logic_app" {
   log_analytics_workspace_id = module.monitoring.workspace_id
   storage_account_id         = module.storage_account.id
 
-  enabled_log { category = "AppServiceHTTPLogs" }
-  enabled_log { category = "AppServiceConsoleLogs" }
-  enabled_log { category = "AppServiceAppLogs" }
-  enabled_log { category = "AppServicePlatformLogs" }
+  # Logic App Standard runs on Azure Functions runtime — App Service categories are not supported.
+  enabled_log { category = "WorkflowRuntime" }
+  enabled_log { category = "FunctionAppLogs" }
 
-  metric {
-    category = "AllMetrics"
-    enabled  = true
-  }
+  enabled_metric { category = "AllMetrics" }
 }
 
 # VM → Azure Monitor Agent extension (enables Log Analytics telemetry from the VM)
