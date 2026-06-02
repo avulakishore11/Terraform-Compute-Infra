@@ -17,7 +17,6 @@ resource "azurerm_windows_virtual_machine" "virtual_machine" {
   resource_group_name   = var.resource_group_name
   location              = var.location
   size                  = var.vm_size
-  encryption_at_host_enabled = true
   admin_username        = var.admin_username
   admin_password        = var.admin_password
   network_interface_ids = [var.nic_id]

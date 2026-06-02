@@ -320,8 +320,7 @@ resource "azurerm_recovery_services_vault" "main" {
   location            = module.resource_group.location
   sku                 = "Standard"
   storage_mode_type   = var.recovery_vault_redundancy
-  soft_delete_enabled = true
-  tags                = local.common_tags
+  tags = local.common_tags
 }
 
 resource "azurerm_backup_policy_vm" "main" {
