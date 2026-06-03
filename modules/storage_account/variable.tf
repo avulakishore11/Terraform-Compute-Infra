@@ -72,6 +72,8 @@ variable "cross_tenant_replication_enabled" {
   type        = bool
   default     = false
 }
+
+
 # if you want to enable this, you must also set up a cross-tenant identity and grant it Storage Account Key Operator permissions on the destination account
 # if the destination account is in a different subscription, the identity must also have Reader access to that subscription
 # if the destination account doesnt blong to any tenant or subscription then you should set up a service principal with Storage Account Key Operator permissions on the destination account and use its credentials to authenticate the replication

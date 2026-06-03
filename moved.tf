@@ -83,7 +83,12 @@ moved {
 
 moved {
   from = module.networking.azurerm_private_endpoint.storage_account_private_endpoint
-  to   = azurerm_private_endpoint.storage_account
+  to   = azurerm_private_endpoint.storage_file
+}
+
+moved {
+  from = azurerm_private_endpoint.storage_account
+  to   = azurerm_private_endpoint.storage_file
 }
 
 # ── VM resource rename ────────────────────────────────────────────────────────

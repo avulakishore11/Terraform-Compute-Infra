@@ -36,37 +36,113 @@ module "networking" {
 # module.networking (needs storage ID) and module.storage_account (needs
 # subnet ID from networking). Root level depends on both with no cycle.
 ###############################################################################
+# ── Storage Private Endpoints ─────────────────────────────────────────────────
+# Logic App Standard needs three storage subresource private endpoints:
+#   file  → WEBSITE_CONTENTSHARE (workflow definitions + app config)
+#   blob  → AzureWebJobsStorage  (runtime state, checkpoints, execution history)
+#   queue → AzureWebJobsStorage  (trigger queue processing, workflow orchestration)
+# With vnet_route_all_enabled = true, all outbound traffic routes through the VNet
+# so all three must be resolvable via private DNS within the VNet.
+
 resource "azurerm_private_dns_zone" "storage_file" {
   name                = "privatelink.file.core.windows.net"
   resource_group_name = module.resource_group.name
   tags                = local.common_tags
 }
 
+resource "azurerm_private_dns_zone" "storage_blob" {
+  name                = "privatelink.blob.core.windows.net"
+  resource_group_name = module.resource_group.name
+  tags                = local.common_tags
+}
+
+resource "azurerm_private_dns_zone" "storage_queue" {
+  name                = "privatelink.queue.core.windows.net"
+  resource_group_name = module.resource_group.name
+  tags                = local.common_tags
+}
+
 resource "azurerm_private_dns_zone_virtual_network_link" "storage_file" {
-  name                  = "link-${local.vnet_name}"
+  name                  = "link-file-${local.vnet_name}"
   resource_group_name   = module.resource_group.name
   private_dns_zone_name = azurerm_private_dns_zone.storage_file.name
   virtual_network_id    = module.networking.vnet_id
   tags                  = local.common_tags
 }
 
-resource "azurerm_private_endpoint" "storage_account" {
-  name                = "pe-${local.storage_account_name}"
+resource "azurerm_private_dns_zone_virtual_network_link" "storage_blob" {
+  name                  = "link-blob-${local.vnet_name}"
+  resource_group_name   = module.resource_group.name
+  private_dns_zone_name = azurerm_private_dns_zone.storage_blob.name
+  virtual_network_id    = module.networking.vnet_id
+  tags                  = local.common_tags
+}
+
+resource "azurerm_private_dns_zone_virtual_network_link" "storage_queue" {
+  name                  = "link-queue-${local.vnet_name}"
+  resource_group_name   = module.resource_group.name
+  private_dns_zone_name = azurerm_private_dns_zone.storage_queue.name
+  virtual_network_id    = module.networking.vnet_id
+  tags                  = local.common_tags
+}
+
+resource "azurerm_private_endpoint" "storage_file" {
+  name                = "pe-file-${local.storage_account_name}"
   resource_group_name = module.resource_group.name
   location            = module.resource_group.location
   subnet_id           = module.networking.subnet_private_endpoint_id
   tags                = local.common_tags
 
   private_service_connection {
-    name                           = "psc-${local.storage_account_name}"
+    name                           = "psc-file-${local.storage_account_name}"
     is_manual_connection           = false
     private_connection_resource_id = module.storage_account.id
     subresource_names              = ["file"]
   }
 
   private_dns_zone_group {
-    name                 = "pdzg-${local.storage_account_name}"
+    name                 = "pdzg-file-${local.storage_account_name}"
     private_dns_zone_ids = [azurerm_private_dns_zone.storage_file.id]
+  }
+}
+
+resource "azurerm_private_endpoint" "storage_blob" {
+  name                = "pe-blob-${local.storage_account_name}"
+  resource_group_name = module.resource_group.name
+  location            = module.resource_group.location
+  subnet_id           = module.networking.subnet_private_endpoint_id
+  tags                = local.common_tags
+
+  private_service_connection {
+    name                           = "psc-blob-${local.storage_account_name}"
+    is_manual_connection           = false
+    private_connection_resource_id = module.storage_account.id
+    subresource_names              = ["blob"]
+  }
+
+  private_dns_zone_group {
+    name                 = "pdzg-blob-${local.storage_account_name}"
+    private_dns_zone_ids = [azurerm_private_dns_zone.storage_blob.id]
+  }
+}
+
+resource "azurerm_private_endpoint" "storage_queue" {
+  name                = "pe-queue-${local.storage_account_name}"
+  resource_group_name = module.resource_group.name
+  location            = module.resource_group.location
+  subnet_id           = module.networking.subnet_private_endpoint_id
+  tags                = local.common_tags
+
+  private_service_connection {
+    name                           = "psc-queue-${local.storage_account_name}"
+    is_manual_connection           = false
+    private_connection_resource_id = module.storage_account.id
+    subresource_names              = ["queue"]
+  }
+
+  private_dns_zone_group {
+    name                 = "pdzg-queue-${local.storage_account_name}"
+    private_dns_zone_ids = [azurerm_private_dns_zone.storage_queue.id]
   }
 }
 
@@ -166,8 +242,13 @@ module "logic_app" {
   inbound_subnet_ids   = [module.networking.subnet_vm_id]
 
   # Wait for private endpoint + DNS zone to be ready before creating the Logic App.
-  depends_on = [module.networking, azurerm_storage_share.logicapp,
-                azurerm_private_dns_zone_virtual_network_link.storage_file]
+  depends_on = [
+    module.networking,
+    azurerm_storage_share.logicapp,
+    azurerm_private_dns_zone_virtual_network_link.storage_file,
+    azurerm_private_dns_zone_virtual_network_link.storage_blob,
+    azurerm_private_dns_zone_virtual_network_link.storage_queue,
+  ]
 }
 
 ###############################################################################
