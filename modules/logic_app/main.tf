@@ -32,7 +32,7 @@ resource "azurerm_logic_app_standard" "logic_app" {
     "UAMI_RESOURCE_ID"           = var.uami_resource_id
     # Pre-created file share — prevents Azure from attempting to create it from
     # Microsoft-internal IPs, which fails against network-restricted storage.
-    "WEBSITE_CONTENTSHARE"       = var.content_share_namett5
+    "WEBSITE_CONTENTSHARE"       = var.content_share_name
     # Routes file share access through the VNet private endpoint.
     "WEBSITE_CONTENTOVERVNET"    = "1"
   }

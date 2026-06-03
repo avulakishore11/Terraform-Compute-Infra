@@ -65,7 +65,7 @@ logic_app_sku                  = "WS1"
 logic_app_inbound_ip_addresses = ["170.55.159.52/32"]
 
 # ── Resource Lock ─────────────────────────────────────────────────────────────
-enable_resource_lock = true
+enable_resource_lock = false
 
 # ── Recovery Services Vault + Backup ─────────────────────────────────────────
 recovery_vault_redundancy   = "LocallyRedundant"
