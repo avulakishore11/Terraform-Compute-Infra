@@ -86,11 +86,6 @@ moved {
   to   = azurerm_private_endpoint.storage_file
 }
 
-moved {
-  from = azurerm_private_endpoint.storage_account
-  to   = azurerm_private_endpoint.storage_file
-}
-
 # ── VM resource rename ────────────────────────────────────────────────────────
 
 moved {
